@@ -13,5 +13,5 @@
   "common.deleted_successfully": "Deleted successfully",
   "common.service_unavailable": "Service temporarily unavailable, please try again later",
   "common.route_not_found": "Route not found",
-  "common.method_not_allowed": "Method not allowed",
+  "common.method_not_allowed": "Method not allowed"
 }
