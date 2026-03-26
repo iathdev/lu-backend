@@ -50,19 +50,19 @@ internal/<module>/
 
 ### Modules
 
-- **`internal/auth/`** — Auth subdomain (SSO login via Prep platform, refresh, logout, profile, onboarding). Uses Prep User Service for SSO (`adapter/external/`).
-- **`internal/vocabulary/`** — Vocabulary subdomain (CRUD vocabularies, folders, topics, grammar points). Uses CQRS pattern (separate Command/Query ports and use cases).
-- **`internal/ocr/`** — OCR subdomain (stub — not yet implemented).
+- **`internal/auth/`** — Auth subdomain (SSO login via Prep platform, profile). Uses Prep User Service for SSO (`adapter/service/`). Currently the only implemented module.
+- **`internal/vocabulary/`** — *(planned)* Vocabulary subdomain (CRUD vocabularies, folders, topics, grammar points). Will use CQRS pattern.
+- **`internal/ocr/`** — *(planned)* OCR subdomain.
 - **`internal/shared/`** — Shared kernel: AppError, logger, i18n (en/vi/zh/th/id), middleware, unified response formatting, shared DTOs.
 - **`internal/server/`** — HTTP server, router, middleware chain registration.
-- **`internal/infrastructure/`** — DI container, config (Viper), database, Redis, circuit breaker (gobreaker), logging (Zap), Sentry, OpenTelemetry tracing.
+- **`internal/infrastructure/`** — DI container, config (Viper), database, Redis, cache (multi-level), circuit breaker (gobreaker), logging (Zap), Sentry, OpenTelemetry tracing.
 
 ### Key Patterns
 
 - **Module boundary**: Module A must NOT import internal packages of Module B. Cross-module communication goes through exported ports/interfaces.
 - **Module registration**: Each module exposes `NewModule(deps...) *Module` and `RegisterRoutes(public, protected *gin.RouterGroup)`. DI container creates modules; router calls RegisterRoutes.
 - **Domain entities vs DB models**: Domain entities in `<module>/domain/`, DB models in `<module>/adapter/repository/`. Repositories map between them via `toEntity()`/`fromEntity()`.
-- **CQRS**: Vocabulary module splits use cases into `*Command` and `*Query` types with corresponding port interfaces. Follow this pattern for new modules.
+- **CQRS**: New feature modules should split use cases into `*Command` and `*Query` types with corresponding port interfaces (planned for vocabulary module).
 - **Circuit breaker**: gobreaker v2 in `infrastructure/circuitbreaker/` with `BreakerRegistry`. In-memory per-process (not distributed). Converts `ErrOpenState`/`ErrTooManyRequests` to `apperr.ServiceUnavailable()`. Only `nil` and `ErrNotFound` count as success. Configurable via `CB_*` env vars.
 - **Error handling**: `AppError` in `shared/error/` carries a typed `Code`. `response.HandleError(c, err)` maps code to HTTP status. All error messages are i18n keys translated at response layer.
 - **i18n**: Language detected from `lang` query param > `X-Lang` header > `Accept-Language` header. Translation files in `resources/i18n/<lang>/<domain>.json`. Falls back to English, then raw key.
@@ -78,11 +78,24 @@ internal/<module>/
 3. In `infrastructure/di/container.go`: create the module and pass to `server.NewRouter()`
 4. In `server/router.go`: add module parameter and call `module.RegisterRoutes(public, api)`
 
+### Cache
+
+Generic `Cache[T]` interface in `infrastructure/cache/` with three modes configured via `CACHE_LEVEL` env var:
+- **`L1`** — In-memory only (ristretto). Fast but per-process, not shared across K8s replicas.
+- **`L2`** — Redis only. Shared across instances.
+- **`multi`** — Two-level (L1 + L2). L1 as hot cache, L2 as backing store.
+
+### Rate Limiting
+
+Redis-backed token bucket (`shared/middleware/ratelimit.go`) using Lua scripts for atomic operations. Distributed — works correctly across multiple K8s replicas.
+
 ## API Routes
 
-- `POST /register`, `POST /login`, `POST /refresh` — Public (rate-limited: 5 req/sec, burst 10)
-- `/api/*` — Protected by JWT auth middleware (vocabulary CRUD, folders, logout)
+Currently implemented:
+- `GET /api/me` — Protected, returns authenticated user profile
 - `GET /health` — Health check
+
+Planned (not yet implemented): register, login, refresh, logout, vocabulary CRUD, folders.
 
 ## Documentation
 
