@@ -27,7 +27,5 @@
   "topic.query_failed": "Truy vấn chủ đề thất bại",
   "grammar_point.not_found": "Không tìm thấy điểm ngữ pháp",
   "import.check_existing_failed": "Kiểm tra từ vựng đã tồn tại thất bại",
-  "import.save_failed": "Nhập từ vựng thất bại",
-  "ocr.find_existing_failed": "Tìm từ vựng đã tồn tại thất bại",
-  "ocr.recognize_failed": "Dịch vụ nhận dạng OCR không khả dụng"
+  "import.save_failed": "Nhập từ vựng thất bại"
 }
