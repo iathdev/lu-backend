@@ -38,7 +38,7 @@ Content-Type: multipart/form-data
 Headers: X-Idempotency-Key: {uuid}
 
 Fields:
-  image: file (JPEG/PNG, max 5MB)
+  image: file (JPEG/PNG, max 10MB)
   type: "printed" | "handwritten" | "auto"
   language: "zh" | "vi" | "en"
 ```
@@ -105,6 +105,49 @@ type OCREngineRegistry map[OCREngineKey]OCRServicePort
 ```
 
 Mỗi engine là 1 adapter implement cùng interface. DI container đăng ký vào registry. Use case `resolveEngine()` chọn theo routing rules.
+
+### Image submission: Base64 vs URL
+
+#### Giới hạn kích thước ảnh
+
+| Constraint | Google Cloud Vision | Baidu OCR API | PaddleOCR (self-hosted) |
+|---|---|---|---|
+| **Max (URL)** | 20 MB | ~10 MB | Tuỳ server config |
+| **Max (Base64)** | ~7.3 MB raw (10 MB JSON limit) | ~3 MB raw (4 MB encoded) | Tuỳ server config |
+| **Max dimensions** | 75 MP (auto-resize) | 4,096 px (recommend ≤ 1,024 px) | Configurable (`limit_side_len`) |
+
+> Base64 encode inflate ~37%. URL luôn cho phép ảnh lớn hơn vì không bị giới hạn JSON body.
+> Ảnh lớn hơn **không tốn thêm chi phí** với cloud APIs (tính per-request). Self-hosted thì ảnh lớn tăng RAM + CPU time.
+
+#### Trade-off
+
+| Factor | Base64 (chọn cho MVP) | URL |
+|---|---|---|
+| **File size limit** | Thấp hơn (~7.3 MB Google, ~3 MB Baidu) | Cao hơn (20 MB Google, ~10 MB Baidu) |
+| **Infra cần thêm** | Không | Cần object storage (S3/GCS) + signed URL + cleanup |
+| **Latency** | Payload lớn hơn 37% → upload chậm hơn | GCS URL nhanh ~50%, nhưng URL ngoài thêm round-trip |
+| **Security** | Ảnh trong HTTPS body — an toàn hơn | Ảnh phải public/signed URL, có thể leak qua logs |
+| **Reliability** | Self-contained, không phụ thuộc bên ngoài | URL expire / hosting down → fail |
+| **Fallback engines** | PaddleOCR/Tesseract nhận trực tiếp | Không hỗ trợ URL → server vẫn phải download |
+
+#### Chi phí ẩn của URL mode (S3 ephemeral storage)
+
+Ngay cả khi dùng ephemeral storage (upload → OCR fetch → xoá ngay), S3 vẫn tính phí nhiều chiều:
+
+| Loại phí | Đơn giá | 10K ảnh/ngày × 500 KB |
+|---|---|---|
+| PUT request (upload) | $0.005/1K req | ~$0.05/ngày |
+| GET request (OCR fetch) | $0.0004/1K req | ~$0.004/ngày |
+| Data transfer out | $0.09/GB | ~$0.45/ngày (5 GB) |
+| **Tổng** | | **~$15/tháng** |
+
+→ ~$15/tháng chỉ để làm "trung gian" cho URL mode, trong khi base64 = **$0**.
+
+#### Quyết định
+
+**MVP: Base64.** Ảnh resize server-side xuống ~300-600 KB (target 2048 px, JPEG 85%) → nằm trong limit mọi API, không cần storage infra, chi phí = $0.
+
+**Xem xét URL mode khi:** Scale >50K req/ngày VÀ Go server trở thành bottleneck vì proxy ảnh VÀ ảnh đã có sẵn trên cloud storage vì lý do khác.
 
 ---
 

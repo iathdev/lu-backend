@@ -60,6 +60,46 @@
 - \> 50K/ngày: PaddleOCR self-hosted rẻ nhất
 - Tesseract đắt hơn PaddleOCR ở mọi quy mô + accuracy kém → không chọn
 
+### Giới hạn kích thước ảnh (URL vs Base64)
+
+| Constraint | Google Cloud Vision | Baidu OCR API | PaddleOCR (self-hosted) |
+|---|---|---|---|
+| **Max file (URL)** | **20 MB** | **~10 MB** | Không giới hạn (tuỳ server config) |
+| **Max file (Base64)** | **~7.3 MB raw** (10 MB JSON body limit) | **~3 MB raw** (4 MB sau encode) | Không giới hạn (tuỳ server config) |
+| **Max dimensions** | 75 MP (auto-resize) | 4,096 px cạnh dài (recommend ≤ 1,024 px) | Default 960 px (configurable `limit_side_len`) |
+| **Min dimensions** | 640×480 (recommend 1024×768 cho OCR) | 15 px cạnh ngắn | Không có |
+| **Auto-compress** | Không | Có — ảnh > 1 MB hoặc > 1,024 px bị compress server-side | Có — resize theo `limit_side_len` |
+
+> **Lưu ý:** Base64 encode inflate ~37% so với raw bytes. Ảnh 5 MB raw → ~6.85 MB base64. Google cho phép 10 MB JSON body → raw tối đa ~7.3 MB. Baidu giới hạn 4 MB base64 → raw tối đa ~3 MB.
+
+### Ảnh lớn hơn có tốn thêm chi phí không?
+
+| Engine | Tính phí theo | Ảnh lớn = đắt hơn? |
+|---|---|---|
+| **Google Cloud Vision** | Per-request ($1.50/1K units) | **Không.** 1 MB hay 20 MB cùng giá. Không charge per-byte |
+| **Baidu OCR** | Per-call (free tier + package) | **Không.** Chỉ tính call thành công. Ảnh lớn/nhỏ cùng giá |
+| **PaddleOCR** | Infrastructure cost | **Gián tiếp có.** Ảnh lớn → nhiều RAM hơn, GPU time dài hơn, latency cao hơn |
+
+→ Cloud APIs: kích thước ảnh **không ảnh hưởng giá**, nhưng ảnh lớn tăng latency do upload/transfer.
+→ Self-hosted: ảnh lớn tăng compute cost (RAM, CPU/GPU time).
+
+### Trade-off: Gửi URL vs Base64
+
+| Factor | URL | Base64 |
+|---|---|---|
+| **File size limit** | Cao hơn (20 MB Google, ~10 MB Baidu) | Thấp hơn (~7.3 MB Google, ~3 MB Baidu) |
+| **Latency** | GCS URL nhanh hơn ~50% (theo Google benchmark). URL ngoài thêm 1 round-trip fetch | Payload lớn hơn 37% → upload chậm hơn |
+| **Bandwidth client→server** | Thấp — chỉ gửi string URL | Cao — toàn bộ ảnh encode trong JSON body |
+| **Bandwidth server→OCR** | OCR provider tự fetch ảnh từ URL | Server gửi full payload đến OCR provider |
+| **Reliability** | Phụ thuộc URL accessibility. URL expire hoặc hosting down → fail | Self-contained. Không phụ thuộc bên ngoài |
+| **Security** | Ảnh phải public hoặc dùng signed URL. URL có thể leak qua logs | Ảnh nằm trong HTTPS POST body — an toàn hơn cho sensitive content |
+| **Infra cần thêm** | Cần image hosting (S3/GCS/CDN) + signed URL | Không cần — encode rồi gửi |
+| **Phù hợp khi** | Ảnh > 4 MB, ảnh đã có trên cloud, batch processing | Ảnh < 4 MB, sensitive content, mobile upload, không có cloud storage |
+
+**Recommendation cho project này:**
+- **MVP:** Dùng **base64**. Ảnh sẽ resize server-side xuống ~300-600 KB (target 2048 px, JPEG 85%). Ở size này base64 chỉ thêm ~200 KB overhead — nằm trong limit của mọi API. Không cần setup cloud storage.
+- **Scale phase:** Chuyển sang **URL mode** với signed GCS/S3 URLs nếu ảnh đã lưu trên cloud hoặc cần batch processing.
+
 ### Apps tương tự
 
 - Không app Chinese learning nào dùng Google Cloud Vision — đa số on-device hoặc self-developed
