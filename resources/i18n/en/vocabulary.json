@@ -27,7 +27,5 @@
   "topic.query_failed": "Failed to query topics",
   "grammar_point.not_found": "Grammar point not found",
   "import.check_existing_failed": "Failed to check existing vocabularies",
-  "import.save_failed": "Failed to import vocabularies",
-  "ocr.find_existing_failed": "Failed to find existing vocabularies",
-  "ocr.recognize_failed": "OCR recognition service is unavailable"
+  "import.save_failed": "Failed to import vocabularies"
 }
