@@ -96,7 +96,7 @@ func (useCase *VocabularyQuery) GetVocabularyDetail(ctx context.Context, id stri
 	}, nil
 }
 
-func (useCase *VocabularyQuery) ListByHSKLevel(ctx context.Context, level int, pagination dto.PaginationRequest) (*dto.PaginatedResponse, error) {
+func (useCase *VocabularyQuery) ListByHSKLevel(ctx context.Context, level int, pagination dto.PaginationRequest) (*dto.ListResult[*vdto.VocabularyResponse], error) {
 	normalizePagination(&pagination)
 	offset := (pagination.Page - 1) * pagination.PageSize
 
@@ -110,10 +110,10 @@ func (useCase *VocabularyQuery) ListByHSKLevel(ctx context.Context, level int, p
 		return nil, apperr.InternalServerError("vocabulary.query_failed", err)
 	}
 
-	return mapper.ToPaginatedResponse(vocabs, total, pagination), nil
+	return mapper.ToPaginatedResult(vocabs, total, pagination), nil
 }
 
-func (useCase *VocabularyQuery) ListByTopic(ctx context.Context, slug string, pagination dto.PaginationRequest) (*dto.PaginatedResponse, error) {
+func (useCase *VocabularyQuery) ListByTopic(ctx context.Context, slug string, pagination dto.PaginationRequest) (*dto.ListResult[*vdto.VocabularyResponse], error) {
 	topic, err := useCase.topicRepo.FindBySlug(ctx, slug)
 	if err != nil {
 		return nil, apperr.InternalServerError("topic.query_failed", err)
@@ -135,10 +135,10 @@ func (useCase *VocabularyQuery) ListByTopic(ctx context.Context, slug string, pa
 		return nil, apperr.InternalServerError("vocabulary.query_failed", err)
 	}
 
-	return mapper.ToPaginatedResponse(vocabs, total, pagination), nil
+	return mapper.ToPaginatedResult(vocabs, total, pagination), nil
 }
 
-func (useCase *VocabularyQuery) SearchVocabulary(ctx context.Context, query string, pagination dto.PaginationRequest) (*dto.PaginatedResponse, error) {
+func (useCase *VocabularyQuery) SearchVocabulary(ctx context.Context, query string, pagination dto.PaginationRequest) (*dto.ListResult[*vdto.VocabularyResponse], error) {
 	normalizePagination(&pagination)
 	offset := (pagination.Page - 1) * pagination.PageSize
 
@@ -152,5 +152,5 @@ func (useCase *VocabularyQuery) SearchVocabulary(ctx context.Context, query stri
 		return nil, apperr.InternalServerError("vocabulary.query_failed", err)
 	}
 
-	return mapper.ToPaginatedResponse(vocabs, total, pagination), nil
+	return mapper.ToPaginatedResult(vocabs, total, pagination), nil
 }

@@ -38,7 +38,7 @@ func (useCase *FolderQuery) ListFolders(ctx context.Context, userID string) ([]*
 	return result, nil
 }
 
-func (useCase *FolderQuery) ListVocabularies(ctx context.Context, folderID string, userID string, pagination dto.PaginationRequest) (*dto.PaginatedResponse, error) {
+func (useCase *FolderQuery) ListVocabularies(ctx context.Context, folderID string, userID string, pagination dto.PaginationRequest) (*dto.ListResult[*vdto.VocabularyResponse], error) {
 	folder, err := getOwnedFolder(ctx, useCase.folderRepo, folderID, userID)
 	if err != nil {
 		return nil, err
@@ -63,13 +63,11 @@ func (useCase *FolderQuery) ListVocabularies(ctx context.Context, folderID strin
 		items = append(items, mapper.ToVocabularyResponse(vocab))
 	}
 
-	return &dto.PaginatedResponse{
-		Items: items,
-		Metadata: dto.PaginationMeta{
-			Total:      total,
-			Page:       pagination.Page,
-			PageSize:   pagination.PageSize,
-			TotalPages: totalPages,
-		},
+	return &dto.ListResult[*vdto.VocabularyResponse]{
+		Items:      items,
+		Total:      total,
+		Page:       pagination.Page,
+		PageSize:   pagination.PageSize,
+		TotalPages: totalPages,
 	}, nil
 }

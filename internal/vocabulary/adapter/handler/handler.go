@@ -97,7 +97,7 @@ func (handler *VocabularyHandler) ListByHSKLevel(c *gin.Context) {
 		response.HandleError(c, err)
 		return
 	}
-	response.SuccessWithMetadata(c, http.StatusOK, res.Items, res.Metadata)
+	sendList(c, res)
 }
 
 func (handler *VocabularyHandler) ListByTopic(c *gin.Context) {
@@ -118,7 +118,7 @@ func (handler *VocabularyHandler) ListByTopic(c *gin.Context) {
 		response.HandleError(c, err)
 		return
 	}
-	response.SuccessWithMetadata(c, http.StatusOK, res.Items, res.Metadata)
+	sendList(c, res)
 }
 
 func (handler *VocabularyHandler) SearchVocabulary(c *gin.Context) {
@@ -139,7 +139,7 @@ func (handler *VocabularyHandler) SearchVocabulary(c *gin.Context) {
 		response.HandleError(c, err)
 		return
 	}
-	response.SuccessWithMetadata(c, http.StatusOK, res.Items, res.Metadata)
+	sendList(c, res)
 }
 
 func (handler *VocabularyHandler) UpdateVocabulary(c *gin.Context) {
@@ -162,7 +162,7 @@ func (handler *VocabularyHandler) DeleteVocabulary(c *gin.Context) {
 		response.HandleError(c, err)
 		return
 	}
-	response.Success(c, http.StatusOK, nil, "common.deleted_successfully")
+	response.SuccessNoContent(c)
 }
 
 // --- Topic endpoints ---
@@ -305,7 +305,7 @@ func (handler *VocabularyHandler) DeleteFolder(c *gin.Context) {
 		response.HandleError(c, err)
 		return
 	}
-	response.Success(c, http.StatusOK, nil, "common.deleted_successfully")
+	response.SuccessNoContent(c)
 }
 
 func (handler *VocabularyHandler) AddVocabularyToFolder(c *gin.Context) {
@@ -320,7 +320,7 @@ func (handler *VocabularyHandler) AddVocabularyToFolder(c *gin.Context) {
 		response.HandleError(c, err)
 		return
 	}
-	response.Success(c, http.StatusOK, nil)
+	response.SuccessNoContent(c)
 }
 
 func (handler *VocabularyHandler) RemoveVocabularyFromFolder(c *gin.Context) {
@@ -329,7 +329,7 @@ func (handler *VocabularyHandler) RemoveVocabularyFromFolder(c *gin.Context) {
 		response.HandleError(c, err)
 		return
 	}
-	response.Success(c, http.StatusOK, nil, "common.deleted_successfully")
+	response.SuccessNoContent(c)
 }
 
 func (handler *VocabularyHandler) ListFolderVocabularies(c *gin.Context) {
@@ -345,5 +345,15 @@ func (handler *VocabularyHandler) ListFolderVocabularies(c *gin.Context) {
 		response.HandleError(c, err)
 		return
 	}
-	response.SuccessWithMetadata(c, http.StatusOK, res.Items, res.Metadata)
+	sendList(c, res)
+}
+
+// sendList converts a ListResult into a SuccessList response.
+func sendList[T any](c *gin.Context, result *dto.ListResult[T]) {
+	response.SuccessList(c, result.Items, response.PaginationMeta{
+		Total:      result.Total,
+		Page:       result.Page,
+		PageSize:   result.PageSize,
+		TotalPages: result.TotalPages,
+	})
 }

@@ -19,9 +19,9 @@ type VocabularyCommandPort interface {
 type VocabularyQueryPort interface {
 	GetVocabulary(ctx context.Context, id string) (*vdto.VocabularyResponse, error)
 	GetVocabularyDetail(ctx context.Context, id string) (*vdto.VocabularyDetailResponse, error)
-	ListByHSKLevel(ctx context.Context, level int, pagination dto.PaginationRequest) (*dto.PaginatedResponse, error)
-	ListByTopic(ctx context.Context, slug string, pagination dto.PaginationRequest) (*dto.PaginatedResponse, error)
-	SearchVocabulary(ctx context.Context, query string, pagination dto.PaginationRequest) (*dto.PaginatedResponse, error)
+	ListByHSKLevel(ctx context.Context, level int, pagination dto.PaginationRequest) (*dto.ListResult[*vdto.VocabularyResponse], error)
+	ListByTopic(ctx context.Context, slug string, pagination dto.PaginationRequest) (*dto.ListResult[*vdto.VocabularyResponse], error)
+	SearchVocabulary(ctx context.Context, query string, pagination dto.PaginationRequest) (*dto.ListResult[*vdto.VocabularyResponse], error)
 }
 
 // --- Topic Ports ---
@@ -54,5 +54,5 @@ type FolderCommandPort interface {
 
 type FolderQueryPort interface {
 	ListFolders(ctx context.Context, userID string) ([]*vdto.FolderResponse, error)
-	ListVocabularies(ctx context.Context, folderID string, userID string, pagination dto.PaginationRequest) (*dto.PaginatedResponse, error)
+	ListVocabularies(ctx context.Context, folderID string, userID string, pagination dto.PaginationRequest) (*dto.ListResult[*vdto.VocabularyResponse], error)
 }

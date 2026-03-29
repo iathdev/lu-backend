@@ -11,14 +11,12 @@ type PaginationRequest struct {
 	PageSize int `form:"page_size,default=10" binding:"min=1,max=100"`
 }
 
-type PaginationMeta struct {
-	Total      int64 `json:"total"`
-	Page       int   `json:"page"`
-	PageSize   int   `json:"page_size"`
-	TotalPages int   `json:"total_pages"`
-}
-
-type PaginatedResponse struct {
-	Items    interface{}    `json:"items"`
-	Metadata PaginationMeta `json:"metadata"`
+// ListResult holds paginated items returned by use cases.
+// Handlers convert this into the response envelope via response.SuccessList.
+type ListResult[T any] struct {
+	Items      []T
+	Total      int64
+	Page       int
+	PageSize   int
+	TotalPages int
 }

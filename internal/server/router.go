@@ -1,12 +1,13 @@
 package server
 
 import (
+	"net/http"
+
 	"learning-go/internal/auth"
 	"learning-go/internal/infrastructure/config"
 	"learning-go/internal/shared/middleware"
 	"learning-go/internal/shared/response"
 	"learning-go/internal/vocabulary"
-	"net/http"
 
 	"github.com/gin-gonic/gin"
 	"github.com/redis/go-redis/v9"
@@ -43,7 +44,7 @@ func NewRouter(
 	})
 
 	r.NoMethod(func(c *gin.Context) {
-		response.Error(c, http.StatusMethodNotAllowed, "common.method_not_allowed")
+		response.MethodNotAllowed(c, "common.method_not_allowed")
 	})
 
 	// Health check

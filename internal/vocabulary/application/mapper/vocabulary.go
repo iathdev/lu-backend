@@ -65,19 +65,17 @@ func ToExampleEntities(dtos []vdto.ExampleDTO) []domain.Example {
 	return examples
 }
 
-func ToPaginatedResponse(vocabs []*domain.Vocabulary, total int64, pagination dto.PaginationRequest) *dto.PaginatedResponse {
+func ToPaginatedResult(vocabs []*domain.Vocabulary, total int64, pagination dto.PaginationRequest) *dto.ListResult[*vdto.VocabularyResponse] {
 	items := make([]*vdto.VocabularyResponse, 0, len(vocabs))
 	for _, vocab := range vocabs {
 		items = append(items, ToVocabularyResponse(vocab))
 	}
 	totalPages := int(math.Ceil(float64(total) / float64(pagination.PageSize)))
-	return &dto.PaginatedResponse{
-		Items: items,
-		Metadata: dto.PaginationMeta{
-			Total:      total,
-			Page:       pagination.Page,
-			PageSize:   pagination.PageSize,
-			TotalPages: totalPages,
-		},
+	return &dto.ListResult[*vdto.VocabularyResponse]{
+		Items:      items,
+		Total:      total,
+		Page:       pagination.Page,
+		PageSize:   pagination.PageSize,
+		TotalPages: totalPages,
 	}
 }
