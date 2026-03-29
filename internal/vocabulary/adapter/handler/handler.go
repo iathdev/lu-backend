@@ -58,6 +58,7 @@ func (handler *VocabularyHandler) CreateVocabulary(c *gin.Context) {
 		response.HandleError(c, err)
 		return
 	}
+
 	response.Success(c, http.StatusCreated, res)
 }
 
@@ -67,6 +68,7 @@ func (handler *VocabularyHandler) GetVocabulary(c *gin.Context) {
 		response.HandleError(c, err)
 		return
 	}
+
 	response.Success(c, http.StatusOK, res)
 }
 
@@ -97,6 +99,7 @@ func (handler *VocabularyHandler) ListByHSKLevel(c *gin.Context) {
 		response.HandleError(c, err)
 		return
 	}
+
 	sendList(c, res)
 }
 
@@ -118,6 +121,7 @@ func (handler *VocabularyHandler) ListByTopic(c *gin.Context) {
 		response.HandleError(c, err)
 		return
 	}
+
 	sendList(c, res)
 }
 
@@ -154,6 +158,7 @@ func (handler *VocabularyHandler) UpdateVocabulary(c *gin.Context) {
 		response.HandleError(c, err)
 		return
 	}
+
 	response.Success(c, http.StatusOK, res)
 }
 
@@ -191,25 +196,25 @@ func (handler *VocabularyHandler) ProcessOCRScan(ctx *gin.Context) {
 	// Read uploaded image file
 	file, header, err := ctx.Request.FormFile("image")
 	if err != nil {
-		response.BadRequest(ctx, "ocr.image_required")
+		response.BadRequest(ctx, "vocabulary.ocr_image_required")
 		return
 	}
 	defer file.Close()
 
 	if header.Size > maxImageSize {
-		response.BadRequest(ctx, "ocr.image_too_large")
+		response.BadRequest(ctx, "vocabulary.ocr_image_too_large")
 		return
 	}
 
 	imageBytes, err := io.ReadAll(io.LimitReader(file, maxImageSize+1))
 	if err != nil {
-		response.BadRequest(ctx, "ocr.image_read_failed")
+		response.BadRequest(ctx, "vocabulary.ocr_image_read_failed")
 		return
 	}
 
 	contentType := http.DetectContentType(imageBytes)
 	if !strings.HasPrefix(contentType, "image/") {
-		response.BadRequest(ctx, "ocr.invalid_image_type")
+		response.BadRequest(ctx, "vocabulary.ocr_invalid_image_type")
 		return
 	}
 
@@ -217,6 +222,7 @@ func (handler *VocabularyHandler) ProcessOCRScan(ctx *gin.Context) {
 	if ocrType == "" {
 		ocrType = "auto"
 	}
+
 	language := httpReq.Language
 	if language == "" {
 		language = "zh"
@@ -252,6 +258,7 @@ func (handler *VocabularyHandler) ImportVocabularies(c *gin.Context) {
 		response.HandleError(c, err)
 		return
 	}
+
 	response.Success(c, http.StatusOK, res)
 }
 
@@ -270,6 +277,7 @@ func (handler *VocabularyHandler) CreateFolder(c *gin.Context) {
 		response.HandleError(c, err)
 		return
 	}
+
 	response.Success(c, http.StatusCreated, res)
 }
 
@@ -280,6 +288,7 @@ func (handler *VocabularyHandler) ListFolders(c *gin.Context) {
 		response.HandleError(c, err)
 		return
 	}
+
 	response.Success(c, http.StatusOK, res)
 }
 
@@ -296,6 +305,7 @@ func (handler *VocabularyHandler) UpdateFolder(c *gin.Context) {
 		response.HandleError(c, err)
 		return
 	}
+
 	response.Success(c, http.StatusOK, res)
 }
 
@@ -305,6 +315,7 @@ func (handler *VocabularyHandler) DeleteFolder(c *gin.Context) {
 		response.HandleError(c, err)
 		return
 	}
+
 	response.SuccessNoContent(c)
 }
 
@@ -320,6 +331,7 @@ func (handler *VocabularyHandler) AddVocabularyToFolder(c *gin.Context) {
 		response.HandleError(c, err)
 		return
 	}
+
 	response.SuccessNoContent(c)
 }
 
@@ -329,6 +341,7 @@ func (handler *VocabularyHandler) RemoveVocabularyFromFolder(c *gin.Context) {
 		response.HandleError(c, err)
 		return
 	}
+
 	response.SuccessNoContent(c)
 }
 
@@ -345,6 +358,7 @@ func (handler *VocabularyHandler) ListFolderVocabularies(c *gin.Context) {
 		response.HandleError(c, err)
 		return
 	}
+
 	sendList(c, res)
 }
 

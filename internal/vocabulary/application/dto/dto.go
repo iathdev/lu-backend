@@ -100,10 +100,9 @@ type GrammarPointResponse struct {
 // --- OCR DTOs ---
 
 type OCRScanHTTPRequest struct {
-	ImageURL string `json:"image_url" binding:"required,url"`
-	Type     string `json:"type" binding:"omitempty,oneof=printed handwritten auto"`
-	Language string `json:"language" binding:"omitempty,oneof=zh vi en"`
-	Engine   string `json:"engine" binding:"omitempty,oneof=paddleocr tesseract google_vision baidu_ocr"`
+	Type     string `form:"type" binding:"omitempty,oneof=printed handwritten auto"`
+	Language string `form:"language" binding:"omitempty,oneof=zh vi en"`
+	Engine   string `form:"engine" binding:"omitempty,oneof=paddleocr tesseract google_vision baidu_ocr"`
 }
 
 type OCRScanCharacterItem struct {
