@@ -62,10 +62,6 @@ func NewRouter(
 	authModule.RegisterRoutes(public, protected)
 	vocabularyModule.RegisterRoutes(public, protected)
 
-	r.NoRoute(func(c *gin.Context) {
-		response.NotFound(c, "common.route_not_found")
-	})
-
 	return r
 }
 
