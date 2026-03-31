@@ -32,7 +32,7 @@ func NewVocabularyQuery(
 	}
 }
 
-func (useCase *VocabularyQuery) GetVocabulary(ctx context.Context, id string) (*vdto.VocabularyResponse, error) {
+func (useCase *VocabularyQuery) GetVocabulary(ctx context.Context, id string, _ string) (*vdto.VocabularyResponse, error) {
 	vocabID, err := domain.ParseVocabularyID(id)
 	if err != nil {
 		return nil, apperr.BadRequest("vocabulary.invalid_id")
@@ -49,7 +49,7 @@ func (useCase *VocabularyQuery) GetVocabulary(ctx context.Context, id string) (*
 	return mapper.ToVocabularyResponse(vocab), nil
 }
 
-func (useCase *VocabularyQuery) GetVocabularyDetail(ctx context.Context, id string) (*vdto.VocabularyDetailResponse, error) {
+func (useCase *VocabularyQuery) GetVocabularyDetail(ctx context.Context, id string, _ string) (*vdto.VocabularyDetailResponse, error) {
 	vocabID, err := domain.ParseVocabularyID(id)
 	if err != nil {
 		return nil, apperr.BadRequest("vocabulary.invalid_id")
@@ -84,8 +84,8 @@ func (useCase *VocabularyQuery) GetVocabularyDetail(ctx context.Context, id stri
 		gpResponses = []vdto.GrammarPointResponse{}
 	} else {
 		gpResponses = make([]vdto.GrammarPointResponse, 0, len(grammarPoints))
-		for _, gp := range grammarPoints {
-			gpResponses = append(gpResponses, mapper.ToGrammarPointResponse(gp))
+		for _, grammarPoint := range grammarPoints {
+			gpResponses = append(gpResponses, mapper.ToGrammarPointResponse(grammarPoint))
 		}
 	}
 
@@ -96,61 +96,72 @@ func (useCase *VocabularyQuery) GetVocabularyDetail(ctx context.Context, id stri
 	}, nil
 }
 
-func (useCase *VocabularyQuery) ListByHSKLevel(ctx context.Context, level int, pagination dto.PaginationRequest) (*dto.ListResult[*vdto.VocabularyResponse], error) {
+func (useCase *VocabularyQuery) ListVocabularies(ctx context.Context, filter vdto.VocabularyFilter, pagination dto.PaginationRequest) (*dto.ListResult[*vdto.VocabularyListResponse], error) {
 	normalizePagination(&pagination)
 	offset := (pagination.Page - 1) * pagination.PageSize
 
-	total, err := useCase.vocabRepo.CountByHSKLevel(ctx, level)
+	var langIDPtr *domain.LanguageID
+	if filter.LanguageID != "" {
+		parsed, err := domain.ParseLanguageID(filter.LanguageID)
+		if err != nil {
+			return nil, apperr.BadRequest("vocabulary.invalid_language_id")
+		}
+		langIDPtr = &parsed
+	}
+
+	var profLevelIDPtr *domain.ProficiencyLevelID
+	if filter.ProficiencyLevelID != "" {
+		parsed, err := domain.ParseProficiencyLevelID(filter.ProficiencyLevelID)
+		if err != nil {
+			return nil, apperr.BadRequest("vocabulary.invalid_proficiency_level_id")
+		}
+		profLevelIDPtr = &parsed
+	}
+
+	var topicIDPtr *domain.TopicID
+	if filter.TopicID != "" {
+		parsed, err := domain.ParseTopicID(filter.TopicID)
+		if err != nil {
+			return nil, apperr.BadRequest("vocabulary.invalid_topic_id")
+		}
+		topicIDPtr = &parsed
+	}
+
+	total, err := useCase.vocabRepo.CountAll(ctx, langIDPtr, profLevelIDPtr, topicIDPtr)
 	if err != nil {
 		return nil, apperr.InternalServerError("vocabulary.query_failed", err)
 	}
 
-	vocabs, err := useCase.vocabRepo.FindByHSKLevel(ctx, level, offset, pagination.PageSize)
+	vocabs, err := useCase.vocabRepo.FindAll(ctx, langIDPtr, profLevelIDPtr, topicIDPtr, offset, pagination.PageSize)
 	if err != nil {
 		return nil, apperr.InternalServerError("vocabulary.query_failed", err)
 	}
 
-	return mapper.ToPaginatedResult(vocabs, total, pagination), nil
+	return mapper.ToPaginatedListResult(vocabs, total, pagination), nil
 }
 
-func (useCase *VocabularyQuery) ListByTopic(ctx context.Context, slug string, pagination dto.PaginationRequest) (*dto.ListResult[*vdto.VocabularyResponse], error) {
-	topic, err := useCase.topicRepo.FindBySlug(ctx, slug)
-	if err != nil {
-		return nil, apperr.InternalServerError("topic.query_failed", err)
-	}
-	if topic == nil {
-		return nil, apperr.NotFound("topic.not_found")
-	}
-
+func (useCase *VocabularyQuery) SearchVocabulary(ctx context.Context, query string, languageID string, _ string, pagination dto.PaginationRequest) (*dto.ListResult[*vdto.VocabularyListResponse], error) {
 	normalizePagination(&pagination)
 	offset := (pagination.Page - 1) * pagination.PageSize
 
-	total, err := useCase.vocabRepo.CountByTopicID(ctx, topic.ID)
+	var langIDPtr *domain.LanguageID
+	if languageID != "" {
+		parsed, err := domain.ParseLanguageID(languageID)
+		if err != nil {
+			return nil, apperr.BadRequest("vocabulary.invalid_language_id")
+		}
+		langIDPtr = &parsed
+	}
+
+	total, err := useCase.vocabRepo.CountSearch(ctx, query, langIDPtr)
 	if err != nil {
 		return nil, apperr.InternalServerError("vocabulary.query_failed", err)
 	}
 
-	vocabs, err := useCase.vocabRepo.FindByTopicID(ctx, topic.ID, offset, pagination.PageSize)
+	vocabs, err := useCase.vocabRepo.Search(ctx, query, langIDPtr, offset, pagination.PageSize)
 	if err != nil {
 		return nil, apperr.InternalServerError("vocabulary.query_failed", err)
 	}
 
-	return mapper.ToPaginatedResult(vocabs, total, pagination), nil
-}
-
-func (useCase *VocabularyQuery) SearchVocabulary(ctx context.Context, query string, pagination dto.PaginationRequest) (*dto.ListResult[*vdto.VocabularyResponse], error) {
-	normalizePagination(&pagination)
-	offset := (pagination.Page - 1) * pagination.PageSize
-
-	total, err := useCase.vocabRepo.CountSearch(ctx, query)
-	if err != nil {
-		return nil, apperr.InternalServerError("vocabulary.query_failed", err)
-	}
-
-	vocabs, err := useCase.vocabRepo.Search(ctx, query, offset, pagination.PageSize)
-	if err != nil {
-		return nil, apperr.InternalServerError("vocabulary.query_failed", err)
-	}
-
-	return mapper.ToPaginatedResult(vocabs, total, pagination), nil
+	return mapper.ToPaginatedListResult(vocabs, total, pagination), nil
 }

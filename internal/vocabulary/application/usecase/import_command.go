@@ -5,7 +5,6 @@ import (
 
 	apperr "learning-go/internal/shared/error"
 	vdto "learning-go/internal/vocabulary/application/dto"
-	"learning-go/internal/vocabulary/application/mapper"
 	"learning-go/internal/vocabulary/application/port"
 	"learning-go/internal/vocabulary/domain"
 )
@@ -19,54 +18,76 @@ func NewImportCommand(vocabRepo port.VocabularyRepositoryPort) port.ImportComman
 }
 
 func (useCase *ImportCommand) ImportVocabularies(ctx context.Context, req vdto.BulkImportRequest) (*vdto.BulkImportResponse, error) {
-	// Collect all hanzi to check for existing
-	hanziList := make([]string, 0, len(req.Vocabularies))
-	for _, vocab := range req.Vocabularies {
-		hanziList = append(hanziList, vocab.Hanzi)
+	if len(req.Vocabularies) == 0 {
+		return &vdto.BulkImportResponse{Total: 0}, nil
 	}
 
-	existing, err := useCase.vocabRepo.FindByHanziList(ctx, hanziList)
-	if err != nil {
-		return nil, apperr.InternalServerError("import.check_existing_failed", err)
+	// Group vocabularies by language to check duplicates per language
+	type langGroup struct {
+		languageID domain.LanguageID
+		words      []string
+		items      []vdto.CreateVocabularyRequest
 	}
 
-	existingSet := make(map[string]bool, len(existing))
-	for _, vocab := range existing {
-		existingSet[vocab.Hanzi.String()] = true
+	groupMap := make(map[string]*langGroup)
+	for _, item := range req.Vocabularies {
+		langID, err := domain.ParseLanguageID(item.LanguageID)
+		if err != nil {
+			continue // skip items with invalid language ID
+		}
+		key := langID.String()
+		group, ok := groupMap[key]
+		if !ok {
+			group = &langGroup{languageID: langID}
+			groupMap[key] = group
+		}
+		group.words = append(group.words, item.Word)
+		group.items = append(group.items, item)
 	}
 
-	// Filter out duplicates and create domain entities
+	// Build set of existing words per language
+	existingSet := make(map[string]map[string]bool)
+	for key, group := range groupMap {
+		existing, err := useCase.vocabRepo.FindByWordList(ctx, group.languageID, group.words)
+		if err != nil {
+			return nil, apperr.InternalServerError("import.check_existing_failed", err)
+		}
+		wordSet := make(map[string]bool, len(existing))
+		for _, vocab := range existing {
+			wordSet[vocab.Word] = true
+		}
+		existingSet[key] = wordSet
+	}
+
+	// Filter duplicates and create domain entities
 	var newVocabs []*domain.Vocabulary
 	skipped := 0
-	for _, item := range req.Vocabularies {
-		if existingSet[item.Hanzi] {
-			skipped++
-			continue
-		}
+	for key, group := range groupMap {
+		wordSet := existingSet[key]
+		for _, item := range group.items {
+			if wordSet[item.Word] {
+				skipped++
+				continue
+			}
 
-		vocab, err := domain.NewVocabularyFromParams(domain.VocabularyParams{
-			Hanzi:           item.Hanzi,
-			Pinyin:          item.Pinyin,
-			MeaningVI:       item.MeaningVI,
-			MeaningEN:       item.MeaningEN,
-			HSKLevel:        item.HSKLevel,
-			AudioURL:        item.AudioURL,
-			Examples:        mapper.ToExampleEntities(item.Examples),
-			Radicals:        item.Radicals,
-			StrokeCount:     item.StrokeCount,
-			StrokeDataURL:   item.StrokeDataURL,
-			RecognitionOnly: item.RecognitionOnly,
-			FrequencyRank:   item.FrequencyRank,
-		})
-		if err != nil {
-			skipped++
-			continue
+			params := toVocabularyParams(
+				item.LanguageID, item.ProficiencyLevelID, item.Word,
+				item.Phonetic, item.AudioURL, item.ImageURL,
+				item.FrequencyRank, item.Metadata, item.Meanings,
+			)
+
+			vocab, err := domain.NewVocabularyFromParams(params)
+			if err != nil {
+				skipped++
+				continue
+			}
+			newVocabs = append(newVocabs, vocab)
 		}
-		newVocabs = append(newVocabs, vocab)
 	}
 
 	imported := 0
 	if len(newVocabs) > 0 {
+		var err error
 		imported, err = useCase.vocabRepo.SaveBatch(ctx, newVocabs)
 		if err != nil {
 			return nil, apperr.InternalServerError("import.save_failed", err)

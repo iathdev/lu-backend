@@ -5,17 +5,30 @@ import (
 	"learning-go/internal/vocabulary/domain"
 )
 
+type LanguageRepositoryPort interface {
+	FindAll(ctx context.Context, activeOnly bool) ([]*domain.Language, error)
+	FindByID(ctx context.Context, id domain.LanguageID) (*domain.Language, error)
+}
+
+type CategoryRepositoryPort interface {
+	FindAll(ctx context.Context, languageID *domain.LanguageID, isPublic *bool) ([]*domain.Category, error)
+	FindByID(ctx context.Context, id domain.CategoryID) (*domain.Category, error)
+}
+
+type ProficiencyLevelRepositoryPort interface {
+	FindAll(ctx context.Context, categoryID *domain.CategoryID) ([]*domain.ProficiencyLevel, error)
+	FindByID(ctx context.Context, id domain.ProficiencyLevelID) (*domain.ProficiencyLevel, error)
+}
+
 type VocabularyRepositoryPort interface {
 	Save(ctx context.Context, vocab *domain.Vocabulary) error
 	FindByID(ctx context.Context, id domain.VocabularyID) (*domain.Vocabulary, error)
-	FindByHanzi(ctx context.Context, hanzi string) (*domain.Vocabulary, error)
-	FindByHanziList(ctx context.Context, hanziList []string) ([]*domain.Vocabulary, error)
-	FindByHSKLevel(ctx context.Context, level int, offset, limit int) ([]*domain.Vocabulary, error)
-	CountByHSKLevel(ctx context.Context, level int) (int64, error)
-	FindByTopicID(ctx context.Context, topicID domain.TopicID, offset, limit int) ([]*domain.Vocabulary, error)
-	CountByTopicID(ctx context.Context, topicID domain.TopicID) (int64, error)
-	Search(ctx context.Context, query string, offset, limit int) ([]*domain.Vocabulary, error)
-	CountSearch(ctx context.Context, query string) (int64, error)
+	FindByWord(ctx context.Context, languageID domain.LanguageID, word string) (*domain.Vocabulary, error)
+	FindByWordList(ctx context.Context, languageID domain.LanguageID, words []string) ([]*domain.Vocabulary, error)
+	FindAll(ctx context.Context, languageID *domain.LanguageID, profLevelID *domain.ProficiencyLevelID, topicID *domain.TopicID, offset, limit int) ([]*domain.Vocabulary, error)
+	CountAll(ctx context.Context, languageID *domain.LanguageID, profLevelID *domain.ProficiencyLevelID, topicID *domain.TopicID) (int64, error)
+	Search(ctx context.Context, query string, languageID *domain.LanguageID, offset, limit int) ([]*domain.Vocabulary, error)
+	CountSearch(ctx context.Context, query string, languageID *domain.LanguageID) (int64, error)
 	Update(ctx context.Context, vocab *domain.Vocabulary) error
 	Delete(ctx context.Context, id domain.VocabularyID) error
 	SaveBatch(ctx context.Context, vocabs []*domain.Vocabulary) (int, error)
@@ -26,7 +39,8 @@ type VocabularyRepositoryPort interface {
 type FolderRepositoryPort interface {
 	Save(ctx context.Context, folder *domain.Folder) error
 	FindByID(ctx context.Context, id domain.FolderID) (*domain.Folder, error)
-	FindByUserID(ctx context.Context, userID domain.UserID) ([]*domain.Folder, error)
+	FindByUserID(ctx context.Context, userID domain.UserID, languageID *domain.LanguageID) ([]*domain.Folder, error)
+	CountVocabulariesByFolderIDs(ctx context.Context, folderIDs []domain.FolderID) (map[domain.FolderID]int, error)
 	Update(ctx context.Context, folder *domain.Folder) error
 	Delete(ctx context.Context, id domain.FolderID) error
 	AddVocabulary(ctx context.Context, folderID domain.FolderID, vocabID domain.VocabularyID) error
@@ -36,17 +50,18 @@ type FolderRepositoryPort interface {
 }
 
 type TopicRepositoryPort interface {
-	FindAll(ctx context.Context) ([]*domain.Topic, error)
-	FindBySlug(ctx context.Context, slug string) (*domain.Topic, error)
+	FindAll(ctx context.Context, categoryID *domain.CategoryID) ([]*domain.Topic, error)
+	FindByID(ctx context.Context, id domain.TopicID) (*domain.Topic, error)
 	FindByIDs(ctx context.Context, ids []domain.TopicID) ([]*domain.Topic, error)
 	FindByVocabularyID(ctx context.Context, vocabID domain.VocabularyID) ([]*domain.Topic, error)
 }
 
 type GrammarPointRepositoryPort interface {
-	FindByVocabularyID(ctx context.Context, vocabID domain.VocabularyID) ([]*domain.GrammarPoint, error)
-	FindByHSKLevel(ctx context.Context, level int) ([]*domain.GrammarPoint, error)
-	FindByCode(ctx context.Context, code string) (*domain.GrammarPoint, error)
+	FindAll(ctx context.Context, categoryID *domain.CategoryID, profLevelID *domain.ProficiencyLevelID, offset, limit int) ([]*domain.GrammarPoint, error)
+	CountAll(ctx context.Context, categoryID *domain.CategoryID, profLevelID *domain.ProficiencyLevelID) (int64, error)
+	FindByID(ctx context.Context, id domain.GrammarPointID) (*domain.GrammarPoint, error)
 	FindByIDs(ctx context.Context, ids []domain.GrammarPointID) ([]*domain.GrammarPoint, error)
+	FindByVocabularyID(ctx context.Context, vocabID domain.VocabularyID) ([]*domain.GrammarPoint, error)
 }
 
 type OCRScannerPort interface {
@@ -55,9 +70,9 @@ type OCRScannerPort interface {
 
 type OCRScanInput struct {
 	Image    []byte
-	Type     string // "printed" | "handwritten" | "auto"
-	Language string // "zh" | "vi" | "en"
-	Engine   string // optional: force specific engine
+	Type     string
+	Language string
+	Engine   string
 }
 
 type OCRScanOutput struct {

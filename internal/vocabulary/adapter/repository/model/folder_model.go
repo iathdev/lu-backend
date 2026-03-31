@@ -9,9 +9,10 @@ import (
 )
 
 type FolderModel struct {
-	ID          uuid.UUID `gorm:"type:uuid;primary_key;"`
-	UserID      uuid.UUID `gorm:"type:uuid;not null;index"`
-	Name        string    `gorm:"not null"`
+	ID          uuid.UUID      `gorm:"type:uuid;primary_key"`
+	UserID      uuid.UUID      `gorm:"type:uuid;not null"`
+	LanguageID  uuid.UUID      `gorm:"type:uuid;not null"`
+	Name        string         `gorm:"not null"`
 	Description string
 	CreatedAt   time.Time
 	UpdatedAt   time.Time
@@ -20,14 +21,15 @@ type FolderModel struct {
 
 func (FolderModel) TableName() string { return "folders" }
 
-func (m *FolderModel) ToEntity() *domain.Folder {
+func (model *FolderModel) ToEntity() *domain.Folder {
 	return &domain.Folder{
-		ID:          domain.FolderIDFromUUID(m.ID),
-		UserID:      domain.UserIDFromUUID(m.UserID),
-		Name:        m.Name,
-		Description: m.Description,
-		CreatedAt:   m.CreatedAt,
-		UpdatedAt:   m.UpdatedAt,
+		ID:          domain.FolderIDFromUUID(model.ID),
+		UserID:      domain.UserIDFromUUID(model.UserID),
+		LanguageID:  domain.LanguageIDFromUUID(model.LanguageID),
+		Name:        model.Name,
+		Description: model.Description,
+		CreatedAt:   model.CreatedAt,
+		UpdatedAt:   model.UpdatedAt,
 	}
 }
 
@@ -35,6 +37,7 @@ func FromFolderEntity(folder *domain.Folder) *FolderModel {
 	return &FolderModel{
 		ID:          folder.ID.UUID(),
 		UserID:      folder.UserID.UUID(),
+		LanguageID:  folder.LanguageID.UUID(),
 		Name:        folder.Name,
 		Description: folder.Description,
 		CreatedAt:   folder.CreatedAt,

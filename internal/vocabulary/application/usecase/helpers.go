@@ -74,14 +74,10 @@ func parseGrammarPointIDs(ids []string) ([]domain.GrammarPointID, error) {
 
 func mapVocabEntityError(err error) error {
 	switch {
-	case errors.Is(err, domain.ErrHanziRequired):
-		return apperr.UnprocessableEntity("vocabulary.hanzi_required")
-	case errors.Is(err, domain.ErrPinyinRequired):
-		return apperr.UnprocessableEntity("vocabulary.pinyin_required")
+	case errors.Is(err, domain.ErrWordRequired):
+		return apperr.ValidationFailed("vocabulary.word_required")
 	case errors.Is(err, domain.ErrMeaningRequired):
-		return apperr.UnprocessableEntity("vocabulary.meaning_required")
-	case errors.Is(err, domain.ErrInvalidHSKLevel):
-		return apperr.UnprocessableEntity("vocabulary.invalid_hsk_level")
+		return apperr.ValidationFailed("vocabulary.meaning_required")
 	default:
 		return apperr.InternalServerError("common.internal_server_error", err)
 	}

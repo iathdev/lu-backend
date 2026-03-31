@@ -8,6 +8,7 @@ import (
 	"learning-go/internal/vocabulary/domain"
 	"time"
 
+	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
@@ -40,14 +41,52 @@ func (repo *FolderRepository) FindByID(ctx context.Context, id domain.FolderID) 
 	return m.ToEntity(), nil
 }
 
-func (repo *FolderRepository) FindByUserID(ctx context.Context, userID domain.UserID) ([]*domain.Folder, error) {
+func (repo *FolderRepository) FindByUserID(ctx context.Context, userID domain.UserID, languageID *domain.LanguageID) ([]*domain.Folder, error) {
+	query := repo.db.WithContext(ctx).Where("user_id = ?", userID.UUID())
+	if languageID != nil {
+		query = query.Where("language_id = ?", languageID.UUID())
+	}
+
 	var models []model.FolderModel
-	if err := repo.db.WithContext(ctx).Where("user_id = ?", userID.UUID()).Order("created_at DESC").Find(&models).Error; err != nil {
+	if err := query.Order("created_at DESC").Find(&models).Error; err != nil {
 		return nil, err
 	}
+
 	result := make([]*domain.Folder, 0, len(models))
 	for _, m := range models {
 		result = append(result, m.ToEntity())
+	}
+	return result, nil
+}
+
+func (repo *FolderRepository) CountVocabulariesByFolderIDs(ctx context.Context, folderIDs []domain.FolderID) (map[domain.FolderID]int, error) {
+	if len(folderIDs) == 0 {
+		return map[domain.FolderID]int{}, nil
+	}
+
+	uuids := make([]uuid.UUID, 0, len(folderIDs))
+	for _, id := range folderIDs {
+		uuids = append(uuids, id.UUID())
+	}
+
+	type countRow struct {
+		FolderID uuid.UUID
+		Count    int
+	}
+
+	var rows []countRow
+	if err := repo.db.WithContext(ctx).
+		Model(&model.FolderVocabularyModel{}).
+		Select("folder_id, COUNT(*) as count").
+		Where("folder_id IN ?", uuids).
+		Group("folder_id").
+		Scan(&rows).Error; err != nil {
+		return nil, err
+	}
+
+	result := make(map[domain.FolderID]int, len(rows))
+	for _, row := range rows {
+		result[domain.FolderIDFromUUID(row.FolderID)] = row.Count
 	}
 	return result, nil
 }
@@ -89,7 +128,16 @@ func (repo *FolderRepository) FindVocabularies(ctx context.Context, folderID dom
 		Find(&models).Error; err != nil {
 		return nil, err
 	}
-	return toVocabEntities(models), nil
+
+	vocabs := toVocabEntities(models)
+
+	// Use a temporary VocabularyRepository to reuse the loadMeanings helper.
+	vocabRepo := &VocabularyRepository{db: repo.db}
+	if err := vocabRepo.loadMeanings(ctx, vocabs); err != nil {
+		return nil, err
+	}
+
+	return vocabs, nil
 }
 
 func (repo *FolderRepository) CountVocabularies(ctx context.Context, folderID domain.FolderID) (int64, error) {

@@ -2,28 +2,27 @@ package domain
 
 import "time"
 
-// Topic is a system-defined classification entity for vocabularies.
+// Topic is a system-defined classification entity for vocabularies, scoped to a category.
 type Topic struct {
-	ID        TopicID
-	NameCN    string
-	NameVI    string
-	NameEN    string
-	Slug      string
-	SortOrder int
-	CreatedAt time.Time
+	ID         TopicID
+	CategoryID CategoryID
+	Slug       string
+	Names      map[string]string
+	Offset     int
+	CreatedAt  time.Time
+	UpdatedAt  time.Time
 }
 
-func NewTopic(slug, nameCN, nameVI, nameEN string, sortOrder int) (*Topic, error) {
+func NewTopic(categoryID CategoryID, slug string, names map[string]string, offset int) (*Topic, error) {
 	if slug == "" {
 		return nil, ErrTopicSlugRequired
 	}
 
 	return &Topic{
-		ID:        NewTopicID(),
-		NameCN:    nameCN,
-		NameVI:    nameVI,
-		NameEN:    nameEN,
-		Slug:      slug,
-		SortOrder: sortOrder,
+		ID:         NewTopicID(),
+		CategoryID: categoryID,
+		Slug:       slug,
+		Names:      names,
+		Offset:     offset,
 	}, nil
 }

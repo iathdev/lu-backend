@@ -3,17 +3,18 @@ package domain
 import "time"
 
 // Folder is the aggregate root for user-created vocabulary decks.
-// Invariants: Name is required, owned by a single user.
+// Scoped per language (1 folder = 1 language).
 type Folder struct {
 	ID          FolderID
 	UserID      UserID
+	LanguageID  LanguageID
 	Name        string
 	Description string
 	CreatedAt   time.Time
 	UpdatedAt   time.Time
 }
 
-func NewFolder(userID UserID, name, description string) (*Folder, error) {
+func NewFolder(userID UserID, languageID LanguageID, name, description string) (*Folder, error) {
 	if name == "" {
 		return nil, ErrFolderNameRequired
 	}
@@ -21,6 +22,7 @@ func NewFolder(userID UserID, name, description string) (*Folder, error) {
 	return &Folder{
 		ID:          NewFolderID(),
 		UserID:      userID,
+		LanguageID:  languageID,
 		Name:        name,
 		Description: description,
 	}, nil

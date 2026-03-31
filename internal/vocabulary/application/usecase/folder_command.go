@@ -25,16 +25,21 @@ func (useCase *FolderCommand) CreateFolder(ctx context.Context, userID string, r
 		return nil, apperr.BadRequest("folder.invalid_user_id")
 	}
 
-	folder, err := domain.NewFolder(uid, req.Name, req.Description)
+	langID, err := domain.ParseLanguageID(req.LanguageID)
 	if err != nil {
-		return nil, apperr.UnprocessableEntity("folder.invalid_input")
+		return nil, apperr.BadRequest("folder.invalid_language_id")
+	}
+
+	folder, err := domain.NewFolder(uid, langID, req.Name, req.Description)
+	if err != nil {
+		return nil, apperr.ValidationFailed("folder.invalid_input")
 	}
 
 	if err := useCase.folderRepo.Save(ctx, folder); err != nil {
 		return nil, apperr.InternalServerError("folder.save_failed", err)
 	}
 
-	return mapper.ToFolderResponse(folder), nil
+	return mapper.ToFolderResponse(folder, 0), nil
 }
 
 func (useCase *FolderCommand) UpdateFolder(ctx context.Context, id string, userID string, req vdto.UpdateFolderRequest) (*vdto.FolderResponse, error) {
@@ -44,14 +49,20 @@ func (useCase *FolderCommand) UpdateFolder(ctx context.Context, id string, userI
 	}
 
 	if err := folder.Update(req.Name, req.Description); err != nil {
-		return nil, apperr.UnprocessableEntity("folder.invalid_input")
+		return nil, apperr.ValidationFailed("folder.invalid_input")
 	}
 
 	if err := useCase.folderRepo.Update(ctx, folder); err != nil {
 		return nil, apperr.InternalServerError("folder.update_failed", err)
 	}
 
-	return mapper.ToFolderResponse(folder), nil
+	// Fetch vocab count for updated folder
+	countMap, err := useCase.folderRepo.CountVocabulariesByFolderIDs(ctx, []domain.FolderID{folder.ID})
+	if err != nil {
+		return mapper.ToFolderResponse(folder, 0), nil
+	}
+
+	return mapper.ToFolderResponse(folder, countMap[folder.ID]), nil
 }
 
 func (useCase *FolderCommand) DeleteFolder(ctx context.Context, id string, userID string) error {

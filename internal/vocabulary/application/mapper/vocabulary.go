@@ -8,70 +8,78 @@ import (
 	"learning-go/internal/vocabulary/domain"
 )
 
-func ToVocabularyListResponse(vocab *domain.Vocabulary) vdto.VocabularyListResponse {
-	return vdto.VocabularyListResponse{
-		ID:        vocab.ID.String(),
-		Hanzi:     vocab.Hanzi.String(),
-		Pinyin:    vocab.Pinyin.String(),
-		MeaningVI: vocab.MeaningVI,
-		MeaningEN: vocab.MeaningEN,
-		HSKLevel:  vocab.HSKLevel.Int(),
-	}
-}
-
+// ToVocabularyResponse maps domain.Vocabulary to VocabularyResponse with Meanings[].Examples[].
 func ToVocabularyResponse(vocab *domain.Vocabulary) *vdto.VocabularyResponse {
-	var examples []vdto.ExampleDTO
-	if len(vocab.Examples) > 0 {
-		examples = make([]vdto.ExampleDTO, 0, len(vocab.Examples))
-		for _, example := range vocab.Examples {
-			examples = append(examples, vdto.ExampleDTO{
-				SentenceCN: example.SentenceCN,
-				SentenceVI: example.SentenceVI,
-				AudioURL:   example.AudioURL,
+	meanings := make([]vdto.MeaningResponse, 0, len(vocab.Meanings))
+	for _, meaning := range vocab.Meanings {
+		examples := make([]vdto.MeaningExampleResponse, 0, len(meaning.Examples))
+		for _, example := range meaning.Examples {
+			examples = append(examples, vdto.MeaningExampleResponse{
+				ID:           example.ID.String(),
+				Sentence:     example.Sentence,
+				Phonetic:     example.Phonetic,
+				Translations: example.Translations,
+				AudioURL:     example.AudioURL,
 			})
 		}
+
+		meanings = append(meanings, vdto.MeaningResponse{
+			ID:         meaning.ID.String(),
+			LanguageID: meaning.LanguageID.String(),
+			Meaning:    meaning.Meaning,
+			WordType:   meaning.WordType,
+			IsPrimary:  meaning.IsPrimary,
+			Offset:     meaning.Offset,
+			Examples:   examples,
+		})
 	}
 
 	return &vdto.VocabularyResponse{
-		ID:              vocab.ID.String(),
-		Hanzi:           vocab.Hanzi.String(),
-		Pinyin:          vocab.Pinyin.String(),
-		MeaningVI:       vocab.MeaningVI,
-		MeaningEN:       vocab.MeaningEN,
-		HSKLevel:        vocab.HSKLevel.Int(),
-		AudioURL:        vocab.AudioURL,
-		Examples:        examples,
-		Radicals:        vocab.Radicals,
-		StrokeCount:     vocab.StrokeCount,
-		StrokeDataURL:   vocab.StrokeDataURL,
-		RecognitionOnly: vocab.RecognitionOnly,
-		FrequencyRank:   vocab.FrequencyRank,
-		CreatedAt:       vocab.CreatedAt,
+		ID:                 vocab.ID.String(),
+		LanguageID:         vocab.LanguageID.String(),
+		ProficiencyLevelID: vocab.ProficiencyLevelID.String(),
+		Word:               vocab.Word,
+		Phonetic:           vocab.Phonetic,
+		AudioURL:           vocab.AudioURL,
+		ImageURL:           vocab.ImageURL,
+		FrequencyRank:      vocab.FrequencyRank,
+		Metadata:           vocab.Metadata,
+		Meanings:           meanings,
+		CreatedAt:          vocab.CreatedAt,
 	}
 }
 
-func ToExampleEntities(dtos []vdto.ExampleDTO) []domain.Example {
-	if dtos == nil {
-		return nil
-	}
-	examples := make([]domain.Example, 0, len(dtos))
-	for _, item := range dtos {
-		examples = append(examples, domain.Example{
-			SentenceCN: item.SentenceCN,
-			SentenceVI: item.SentenceVI,
-			AudioURL:   item.AudioURL,
+// ToVocabularyListResponse maps domain.Vocabulary to lightweight VocabularyListResponse (no examples).
+func ToVocabularyListResponse(vocab *domain.Vocabulary) *vdto.VocabularyListResponse {
+	meanings := make([]vdto.MeaningListResponse, 0, len(vocab.Meanings))
+	for _, meaning := range vocab.Meanings {
+		meanings = append(meanings, vdto.MeaningListResponse{
+			Meaning:   meaning.Meaning,
+			WordType:  meaning.WordType,
+			IsPrimary: meaning.IsPrimary,
 		})
 	}
-	return examples
+
+	return &vdto.VocabularyListResponse{
+		ID:                 vocab.ID.String(),
+		Word:               vocab.Word,
+		Phonetic:           vocab.Phonetic,
+		Meanings:           meanings,
+		ProficiencyLevelID: vocab.ProficiencyLevelID.String(),
+		FrequencyRank:      vocab.FrequencyRank,
+	}
 }
 
-func ToPaginatedResult(vocabs []*domain.Vocabulary, total int64, pagination dto.PaginationRequest) *dto.ListResult[*vdto.VocabularyResponse] {
-	items := make([]*vdto.VocabularyResponse, 0, len(vocabs))
+// ToPaginatedListResult maps a slice of domain vocabularies to a paginated ListResult of VocabularyListResponse.
+func ToPaginatedListResult(vocabs []*domain.Vocabulary, total int64, pagination dto.PaginationRequest) *dto.ListResult[*vdto.VocabularyListResponse] {
+	items := make([]*vdto.VocabularyListResponse, 0, len(vocabs))
 	for _, vocab := range vocabs {
-		items = append(items, ToVocabularyResponse(vocab))
+		items = append(items, ToVocabularyListResponse(vocab))
 	}
+
 	totalPages := int(math.Ceil(float64(total) / float64(pagination.PageSize)))
-	return &dto.ListResult[*vdto.VocabularyResponse]{
+
+	return &dto.ListResult[*vdto.VocabularyListResponse]{
 		Items:      items,
 		Total:      total,
 		Page:       pagination.Page,

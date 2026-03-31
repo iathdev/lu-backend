@@ -5,25 +5,27 @@ import (
 	"learning-go/internal/vocabulary/domain"
 )
 
+// ToTopicResponse maps domain.Topic to TopicResponse.
 func ToTopicResponse(topic *domain.Topic) vdto.TopicResponse {
 	return vdto.TopicResponse{
-		ID:     topic.ID.String(),
-		NameCN: topic.NameCN,
-		NameVI: topic.NameVI,
-		NameEN: topic.NameEN,
-		Slug:   topic.Slug,
+		ID:         topic.ID.String(),
+		CategoryID: topic.CategoryID.String(),
+		Slug:       topic.Slug,
+		Names:      topic.Names,
+		Offset:     topic.Offset,
 	}
 }
 
-func ToGrammarPointResponse(gp *domain.GrammarPoint) vdto.GrammarPointResponse {
+// ToGrammarPointResponse maps domain.GrammarPoint to GrammarPointResponse.
+func ToGrammarPointResponse(grammarPoint *domain.GrammarPoint) vdto.GrammarPointResponse {
 	return vdto.GrammarPointResponse{
-		ID:            gp.ID.String(),
-		Code:          gp.Code,
-		Pattern:       gp.Pattern,
-		ExampleCN:     gp.ExampleCN,
-		ExampleVI:     gp.ExampleVI,
-		Rule:          gp.Rule,
-		CommonMistake: gp.CommonMistake,
-		HSKLevel:      gp.HSKLevel.Int(),
+		ID:                 grammarPoint.ID.String(),
+		CategoryID:         grammarPoint.CategoryID.String(),
+		ProficiencyLevelID: grammarPoint.ProficiencyLevelID.String(),
+		Code:               grammarPoint.Code,
+		Pattern:            grammarPoint.Pattern,
+		Examples:           grammarPoint.Examples,
+		Rule:               grammarPoint.Rule,
+		CommonMistakes:     grammarPoint.CommonMistakes,
 	}
 }

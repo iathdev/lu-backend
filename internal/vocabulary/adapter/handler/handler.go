@@ -3,7 +3,6 @@ package handler
 import (
 	"io"
 	"net/http"
-	"strconv"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -15,36 +14,125 @@ import (
 )
 
 type VocabularyHandler struct {
+	langQry   port.LanguageQueryPort
+	catQry    port.CategoryQueryPort
+	plQry     port.ProficiencyLevelQueryPort
 	vocabCmd  port.VocabularyCommandPort
 	vocabQry  port.VocabularyQueryPort
 	folderCmd port.FolderCommandPort
 	folderQry port.FolderQueryPort
 	topicQry  port.TopicQueryPort
+	gpQry     port.GrammarPointQueryPort
 	importCmd port.ImportCommandPort
 	ocrCmd    port.OCRScannerPort
 }
 
 func NewVocabularyHandler(
+	langQry port.LanguageQueryPort,
+	catQry port.CategoryQueryPort,
+	plQry port.ProficiencyLevelQueryPort,
 	vocabCmd port.VocabularyCommandPort,
 	vocabQry port.VocabularyQueryPort,
 	folderCmd port.FolderCommandPort,
 	folderQry port.FolderQueryPort,
 	topicQry port.TopicQueryPort,
+	gpQry port.GrammarPointQueryPort,
 	importCmd port.ImportCommandPort,
 	ocrCmd port.OCRScannerPort,
 ) *VocabularyHandler {
 	return &VocabularyHandler{
+		langQry:   langQry,
+		catQry:    catQry,
+		plQry:     plQry,
 		vocabCmd:  vocabCmd,
 		vocabQry:  vocabQry,
 		folderCmd: folderCmd,
 		folderQry: folderQry,
 		topicQry:  topicQry,
+		gpQry:     gpQry,
 		importCmd: importCmd,
 		ocrCmd:    ocrCmd,
 	}
 }
 
-// --- Vocabulary endpoints ---
+// --- Group 1: Language & Proficiency ---
+
+func (handler *VocabularyHandler) ListLanguages(c *gin.Context) {
+	activeOnly := true
+	if c.Query("active_only") == "false" {
+		activeOnly = false
+	}
+
+	res, err := handler.langQry.ListLanguages(c.Request.Context(), activeOnly)
+	if err != nil {
+		response.HandleError(c, err)
+		return
+	}
+
+	response.Success(c, http.StatusOK, res)
+}
+
+func (handler *VocabularyHandler) GetLanguage(c *gin.Context) {
+	res, err := handler.langQry.GetLanguage(c.Request.Context(), c.Param("id"))
+	if err != nil {
+		response.HandleError(c, err)
+		return
+	}
+
+	response.Success(c, http.StatusOK, res)
+}
+
+func (handler *VocabularyHandler) ListCategories(c *gin.Context) {
+	languageID := c.Query("language_id")
+
+	var isPublic *bool
+	if v := c.Query("is_public"); v != "" {
+		val := v == "true"
+		isPublic = &val
+	}
+
+	res, err := handler.catQry.ListCategories(c.Request.Context(), languageID, isPublic)
+	if err != nil {
+		response.HandleError(c, err)
+		return
+	}
+
+	response.Success(c, http.StatusOK, res)
+}
+
+func (handler *VocabularyHandler) GetCategory(c *gin.Context) {
+	res, err := handler.catQry.GetCategory(c.Request.Context(), c.Param("id"))
+	if err != nil {
+		response.HandleError(c, err)
+		return
+	}
+
+	response.Success(c, http.StatusOK, res)
+}
+
+func (handler *VocabularyHandler) ListProficiencyLevels(c *gin.Context) {
+	categoryID := c.Query("category_id")
+
+	res, err := handler.plQry.ListProficiencyLevels(c.Request.Context(), categoryID)
+	if err != nil {
+		response.HandleError(c, err)
+		return
+	}
+
+	response.Success(c, http.StatusOK, res)
+}
+
+func (handler *VocabularyHandler) GetProficiencyLevel(c *gin.Context) {
+	res, err := handler.plQry.GetProficiencyLevel(c.Request.Context(), c.Param("id"))
+	if err != nil {
+		response.HandleError(c, err)
+		return
+	}
+
+	response.Success(c, http.StatusOK, res)
+}
+
+// --- Group 2: Vocabulary ---
 
 func (handler *VocabularyHandler) CreateVocabulary(c *gin.Context) {
 	var req vdto.CreateVocabularyRequest
@@ -63,7 +151,9 @@ func (handler *VocabularyHandler) CreateVocabulary(c *gin.Context) {
 }
 
 func (handler *VocabularyHandler) GetVocabulary(c *gin.Context) {
-	res, err := handler.vocabQry.GetVocabulary(c.Request.Context(), c.Param("id"))
+	meaningLang := c.Query("meaning_lang")
+
+	res, err := handler.vocabQry.GetVocabulary(c.Request.Context(), c.Param("id"), meaningLang)
 	if err != nil {
 		response.HandleError(c, err)
 		return
@@ -73,18 +163,21 @@ func (handler *VocabularyHandler) GetVocabulary(c *gin.Context) {
 }
 
 func (handler *VocabularyHandler) GetVocabularyDetail(c *gin.Context) {
-	res, err := handler.vocabQry.GetVocabularyDetail(c.Request.Context(), c.Param("id"))
+	meaningLang := c.Query("meaning_lang")
+
+	res, err := handler.vocabQry.GetVocabularyDetail(c.Request.Context(), c.Param("id"), meaningLang)
 	if err != nil {
 		response.HandleError(c, err)
 		return
 	}
+
 	response.Success(c, http.StatusOK, res)
 }
 
-func (handler *VocabularyHandler) ListByHSKLevel(c *gin.Context) {
-	level, err := strconv.Atoi(c.Param("level"))
-	if err != nil || level < 1 || level > 9 {
-		response.BadRequest(c, "common.bad_request")
+func (handler *VocabularyHandler) ListVocabularies(c *gin.Context) {
+	var filter vdto.VocabularyFilter
+	if err := c.ShouldBindQuery(&filter); err != nil {
+		response.ValidationError(c, err)
 		return
 	}
 
@@ -94,29 +187,7 @@ func (handler *VocabularyHandler) ListByHSKLevel(c *gin.Context) {
 		return
 	}
 
-	res, err := handler.vocabQry.ListByHSKLevel(c.Request.Context(), level, pagination)
-	if err != nil {
-		response.HandleError(c, err)
-		return
-	}
-
-	sendList(c, res)
-}
-
-func (handler *VocabularyHandler) ListByTopic(c *gin.Context) {
-	slug := c.Param("slug")
-	if slug == "" {
-		response.BadRequest(c, "common.bad_request")
-		return
-	}
-
-	var pagination dto.PaginationRequest
-	if err := c.ShouldBindQuery(&pagination); err != nil {
-		response.ValidationError(c, err)
-		return
-	}
-
-	res, err := handler.vocabQry.ListByTopic(c.Request.Context(), slug, pagination)
+	res, err := handler.vocabQry.ListVocabularies(c.Request.Context(), filter, pagination)
 	if err != nil {
 		response.HandleError(c, err)
 		return
@@ -132,17 +203,21 @@ func (handler *VocabularyHandler) SearchVocabulary(c *gin.Context) {
 		return
 	}
 
+	languageID := c.Query("language_id")
+	meaningLang := c.Query("meaning_lang")
+
 	var pagination dto.PaginationRequest
 	if err := c.ShouldBindQuery(&pagination); err != nil {
 		response.ValidationError(c, err)
 		return
 	}
 
-	res, err := handler.vocabQry.SearchVocabulary(c.Request.Context(), query, pagination)
+	res, err := handler.vocabQry.SearchVocabulary(c.Request.Context(), query, languageID, meaningLang, pagination)
 	if err != nil {
 		response.HandleError(c, err)
 		return
 	}
+
 	sendList(c, res)
 }
 
@@ -167,21 +242,25 @@ func (handler *VocabularyHandler) DeleteVocabulary(c *gin.Context) {
 		response.HandleError(c, err)
 		return
 	}
+
 	response.SuccessNoContent(c)
 }
 
-// --- Topic endpoints ---
+func (handler *VocabularyHandler) ImportVocabularies(c *gin.Context) {
+	var req vdto.BulkImportRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.ValidationError(c, err)
+		return
+	}
 
-func (handler *VocabularyHandler) ListTopics(c *gin.Context) {
-	res, err := handler.topicQry.ListTopics(c.Request.Context())
+	res, err := handler.importCmd.ImportVocabularies(c.Request.Context(), req)
 	if err != nil {
 		response.HandleError(c, err)
 		return
 	}
+
 	response.Success(c, http.StatusOK, res)
 }
-
-// --- OCR endpoints ---
 
 func (handler *VocabularyHandler) ProcessOCRScan(ctx *gin.Context) {
 	const maxImageSize = 10 << 20 // 10MB
@@ -244,16 +323,12 @@ func (handler *VocabularyHandler) ProcessOCRScan(ctx *gin.Context) {
 	response.Success(ctx, http.StatusOK, result)
 }
 
-// --- Import endpoints ---
+// --- Group 3: Classification ---
 
-func (handler *VocabularyHandler) ImportVocabularies(c *gin.Context) {
-	var req vdto.BulkImportRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		response.ValidationError(c, err)
-		return
-	}
+func (handler *VocabularyHandler) ListTopics(c *gin.Context) {
+	categoryID := c.Query("category_id")
 
-	res, err := handler.importCmd.ImportVocabularies(c.Request.Context(), req)
+	res, err := handler.topicQry.ListTopics(c.Request.Context(), categoryID)
 	if err != nil {
 		response.HandleError(c, err)
 		return
@@ -262,7 +337,76 @@ func (handler *VocabularyHandler) ImportVocabularies(c *gin.Context) {
 	response.Success(c, http.StatusOK, res)
 }
 
-// --- Folder endpoints ---
+func (handler *VocabularyHandler) GetTopic(c *gin.Context) {
+	res, err := handler.topicQry.GetTopic(c.Request.Context(), c.Param("id"))
+	if err != nil {
+		response.HandleError(c, err)
+		return
+	}
+
+	response.Success(c, http.StatusOK, res)
+}
+
+func (handler *VocabularyHandler) ListGrammarPoints(c *gin.Context) {
+	categoryID := c.Query("category_id")
+	proficiencyLevelID := c.Query("proficiency_level_id")
+
+	var pagination dto.PaginationRequest
+	if err := c.ShouldBindQuery(&pagination); err != nil {
+		response.ValidationError(c, err)
+		return
+	}
+
+	res, err := handler.gpQry.ListGrammarPoints(c.Request.Context(), categoryID, proficiencyLevelID, pagination)
+	if err != nil {
+		response.HandleError(c, err)
+		return
+	}
+
+	sendList(c, res)
+}
+
+func (handler *VocabularyHandler) GetGrammarPoint(c *gin.Context) {
+	res, err := handler.gpQry.GetGrammarPoint(c.Request.Context(), c.Param("id"))
+	if err != nil {
+		response.HandleError(c, err)
+		return
+	}
+
+	response.Success(c, http.StatusOK, res)
+}
+
+func (handler *VocabularyHandler) SetVocabularyTopics(c *gin.Context) {
+	var req vdto.SetTopicsRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.ValidationError(c, err)
+		return
+	}
+
+	if err := handler.vocabCmd.SetTopics(c.Request.Context(), c.Param("id"), req.TopicIDs); err != nil {
+		response.HandleError(c, err)
+		return
+	}
+
+	response.SuccessNoContent(c)
+}
+
+func (handler *VocabularyHandler) SetVocabularyGrammarPoints(c *gin.Context) {
+	var req vdto.SetGrammarPointsRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.ValidationError(c, err)
+		return
+	}
+
+	if err := handler.vocabCmd.SetGrammarPoints(c.Request.Context(), c.Param("id"), req.GrammarPointIDs); err != nil {
+		response.HandleError(c, err)
+		return
+	}
+
+	response.SuccessNoContent(c)
+}
+
+// --- Group 4: Folders ---
 
 func (handler *VocabularyHandler) CreateFolder(c *gin.Context) {
 	var req vdto.CreateFolderRequest
@@ -283,7 +427,9 @@ func (handler *VocabularyHandler) CreateFolder(c *gin.Context) {
 
 func (handler *VocabularyHandler) ListFolders(c *gin.Context) {
 	userID := c.GetString("user_id")
-	res, err := handler.folderQry.ListFolders(c.Request.Context(), userID)
+	languageID := c.Query("language_id")
+
+	res, err := handler.folderQry.ListFolders(c.Request.Context(), userID, languageID)
 	if err != nil {
 		response.HandleError(c, err)
 		return
@@ -347,13 +493,15 @@ func (handler *VocabularyHandler) RemoveVocabularyFromFolder(c *gin.Context) {
 
 func (handler *VocabularyHandler) ListFolderVocabularies(c *gin.Context) {
 	userID := c.GetString("user_id")
+	meaningLang := c.Query("meaning_lang")
+
 	var pagination dto.PaginationRequest
 	if err := c.ShouldBindQuery(&pagination); err != nil {
 		response.ValidationError(c, err)
 		return
 	}
 
-	res, err := handler.folderQry.ListVocabularies(c.Request.Context(), c.Param("id"), userID, pagination)
+	res, err := handler.folderQry.ListVocabularies(c.Request.Context(), c.Param("id"), userID, meaningLang, pagination)
 	if err != nil {
 		response.HandleError(c, err)
 		return

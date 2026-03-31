@@ -1,36 +1,71 @@
 package model
 
 import (
+	"learning-go/internal/shared/common"
 	"learning-go/internal/vocabulary/domain"
 	"time"
 
 	"github.com/google/uuid"
 )
 
+type GenericJSON = common.JSONB[map[string]any]
+
 type GrammarPointModel struct {
-	ID            uuid.UUID `gorm:"type:uuid;primary_key;"`
-	Code          string    `gorm:"not null;uniqueIndex"`
-	Pattern       string    `gorm:"not null"`
-	ExampleCN     string    `gorm:"column:example_cn"`
-	ExampleVI     string    `gorm:"column:example_vi"`
-	Rule          string
-	CommonMistake string    `gorm:"column:common_mistake"`
-	HSKLevel      int       `gorm:"not null;index"`
-	CreatedAt     time.Time
+	ID                 uuid.UUID   `gorm:"type:uuid;primary_key"`
+	CategoryID         uuid.UUID   `gorm:"type:uuid;not null"`
+	ProficiencyLevelID uuid.UUID   `gorm:"type:uuid"`
+	Code               string      `gorm:"not null"`
+	Pattern            string      `gorm:"not null"`
+	Examples           GenericJSON `gorm:"type:jsonb;default:'{}'"`
+	Rule               GenericJSON `gorm:"type:jsonb;default:'{}'"`
+	CommonMistakes     GenericJSON `gorm:"column:common_mistakes;type:jsonb;default:'{}'"`
+	CreatedAt          time.Time
+	UpdatedAt          time.Time
 }
 
 func (GrammarPointModel) TableName() string { return "grammar_points" }
 
-func (m *GrammarPointModel) ToEntity() *domain.GrammarPoint {
+func (model *GrammarPointModel) ToEntity() *domain.GrammarPoint {
+	examples := make(map[string]any)
+	for key, val := range model.Examples.Data {
+		examples[key] = val
+	}
+
+	rule := make(map[string]any)
+	for key, val := range model.Rule.Data {
+		rule[key] = val
+	}
+
+	commonMistakes := make(map[string]any)
+	for key, val := range model.CommonMistakes.Data {
+		commonMistakes[key] = val
+	}
+
 	return &domain.GrammarPoint{
-		ID:            domain.GrammarPointIDFromUUID(m.ID),
-		Code:          m.Code,
-		Pattern:       m.Pattern,
-		ExampleCN:     m.ExampleCN,
-		ExampleVI:     m.ExampleVI,
-		Rule:          m.Rule,
-		CommonMistake: m.CommonMistake,
-		HSKLevel:      domain.HSKLevel(m.HSKLevel),
-		CreatedAt:     m.CreatedAt,
+		ID:                 domain.GrammarPointIDFromUUID(model.ID),
+		CategoryID:         domain.CategoryIDFromUUID(model.CategoryID),
+		ProficiencyLevelID: domain.ProficiencyLevelIDFromUUID(model.ProficiencyLevelID),
+		Code:               model.Code,
+		Pattern:            model.Pattern,
+		Examples:           examples,
+		Rule:               rule,
+		CommonMistakes:     commonMistakes,
+		CreatedAt:          model.CreatedAt,
+		UpdatedAt:          model.UpdatedAt,
+	}
+}
+
+func FromGrammarPointEntity(gp *domain.GrammarPoint) *GrammarPointModel {
+	return &GrammarPointModel{
+		ID:                 gp.ID.UUID(),
+		CategoryID:         gp.CategoryID.UUID(),
+		ProficiencyLevelID: gp.ProficiencyLevelID.UUID(),
+		Code:               gp.Code,
+		Pattern:            gp.Pattern,
+		Examples:           common.NewJSONB(gp.Examples),
+		Rule:               common.NewJSONB(gp.Rule),
+		CommonMistakes:     common.NewJSONB(gp.CommonMistakes),
+		CreatedAt:          gp.CreatedAt,
+		UpdatedAt:          gp.UpdatedAt,
 	}
 }
