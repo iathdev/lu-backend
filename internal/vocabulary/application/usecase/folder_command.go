@@ -36,7 +36,7 @@ func (useCase *FolderCommand) CreateFolder(ctx context.Context, userID string, r
 	}
 
 	if err := useCase.folderRepo.Save(ctx, folder); err != nil {
-		return nil, apperr.InternalServerError("common.internal_server_error", err)
+		return nil, apperr.InternalServerError("common.internal_error", err)
 	}
 
 	return mapper.ToFolderResponse(folder, 0), nil
@@ -53,7 +53,7 @@ func (useCase *FolderCommand) UpdateFolder(ctx context.Context, id string, userI
 	}
 
 	if err := useCase.folderRepo.Update(ctx, folder); err != nil {
-		return nil, apperr.InternalServerError("common.internal_server_error", err)
+		return nil, apperr.InternalServerError("common.internal_error", err)
 	}
 
 	// Fetch vocab count for updated folder
@@ -72,7 +72,7 @@ func (useCase *FolderCommand) DeleteFolder(ctx context.Context, id string, userI
 	}
 
 	if err := useCase.folderRepo.Delete(ctx, folder.ID); err != nil {
-		return apperr.InternalServerError("common.internal_server_error", err)
+		return apperr.InternalServerError("common.internal_error", err)
 	}
 
 	return nil
@@ -91,14 +91,14 @@ func (useCase *FolderCommand) AddVocabulary(ctx context.Context, folderID string
 
 	vocab, err := useCase.vocabRepo.FindByID(ctx, vid)
 	if err != nil {
-		return apperr.InternalServerError("common.internal_server_error", err)
+		return apperr.InternalServerError("common.internal_error", err)
 	}
 	if vocab == nil {
 		return apperr.NotFound("vocabulary.not_found")
 	}
 
 	if err := useCase.folderRepo.AddVocabulary(ctx, folder.ID, vid); err != nil {
-		return apperr.InternalServerError("common.internal_server_error", err)
+		return apperr.InternalServerError("common.internal_error", err)
 	}
 
 	return nil
@@ -116,7 +116,7 @@ func (useCase *FolderCommand) RemoveVocabulary(ctx context.Context, folderID str
 	}
 
 	if err := useCase.folderRepo.RemoveVocabulary(ctx, folder.ID, vid); err != nil {
-		return apperr.InternalServerError("common.internal_server_error", err)
+		return apperr.InternalServerError("common.internal_error", err)
 	}
 	return nil
 }

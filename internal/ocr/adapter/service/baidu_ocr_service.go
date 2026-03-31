@@ -90,7 +90,7 @@ func (svc *BaiduOCRService) Recognize(ctx context.Context, req port.OCRRequest) 
 		reqURL := fmt.Sprintf("%s?access_token=%s", endpoint, token)
 		httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, reqURL, strings.NewReader(form.Encode()))
 		if err != nil {
-			return nil, apperr.InternalServerError("common.internal_server_error", err)
+			return nil, apperr.InternalServerError("common.internal_error", err)
 		}
 		httpReq.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 

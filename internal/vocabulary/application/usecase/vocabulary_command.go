@@ -36,7 +36,7 @@ func (useCase *VocabularyCommand) CreateVocabulary(ctx context.Context, req vdto
 	}
 
 	if err := useCase.vocabRepo.Save(ctx, vocab); err != nil {
-		return nil, apperr.InternalServerError("common.internal_server_error", err)
+		return nil, apperr.InternalServerError("common.internal_error", err)
 	}
 
 	return mapper.ToVocabularyResponse(vocab), nil
@@ -50,7 +50,7 @@ func (useCase *VocabularyCommand) UpdateVocabulary(ctx context.Context, id strin
 
 	existing, err := useCase.vocabRepo.FindByID(ctx, vocabID)
 	if err != nil {
-		return nil, apperr.InternalServerError("common.internal_server_error", err)
+		return nil, apperr.InternalServerError("common.internal_error", err)
 	}
 
 	if existing == nil {
@@ -67,7 +67,7 @@ func (useCase *VocabularyCommand) UpdateVocabulary(ctx context.Context, id strin
 	}
 
 	if err := useCase.vocabRepo.Update(ctx, existing); err != nil {
-		return nil, apperr.InternalServerError("common.internal_server_error", err)
+		return nil, apperr.InternalServerError("common.internal_error", err)
 	}
 
 	// Set topics if provided
@@ -79,7 +79,7 @@ func (useCase *VocabularyCommand) UpdateVocabulary(ctx context.Context, id strin
 
 		found, findErr := useCase.topicRepo.FindByIDs(ctx, topicIDs)
 		if findErr != nil {
-			return nil, apperr.InternalServerError("common.internal_server_error", findErr)
+			return nil, apperr.InternalServerError("common.internal_error", findErr)
 		}
 
 		if len(found) != len(topicIDs) {
@@ -88,7 +88,7 @@ func (useCase *VocabularyCommand) UpdateVocabulary(ctx context.Context, id strin
 
 		existing.SetTopics(topicIDs)
 		if err := useCase.vocabRepo.SetTopics(ctx, existing.ID, topicIDs); err != nil {
-			return nil, apperr.InternalServerError("common.internal_server_error", err)
+			return nil, apperr.InternalServerError("common.internal_error", err)
 		}
 	}
 
@@ -100,14 +100,14 @@ func (useCase *VocabularyCommand) UpdateVocabulary(ctx context.Context, id strin
 		}
 		found, findErr := useCase.grammarRepo.FindByIDs(ctx, gpIDs)
 		if findErr != nil {
-			return nil, apperr.InternalServerError("common.internal_server_error", findErr)
+			return nil, apperr.InternalServerError("common.internal_error", findErr)
 		}
 		if len(found) != len(gpIDs) {
 			return nil, apperr.BadRequest("vocabulary.invalid_grammar_point_id")
 		}
 		existing.SetGrammarPoints(gpIDs)
 		if err := useCase.vocabRepo.SetGrammarPoints(ctx, existing.ID, gpIDs); err != nil {
-			return nil, apperr.InternalServerError("common.internal_server_error", err)
+			return nil, apperr.InternalServerError("common.internal_error", err)
 		}
 	}
 
@@ -122,7 +122,7 @@ func (useCase *VocabularyCommand) DeleteVocabulary(ctx context.Context, id strin
 
 	vocab, err := useCase.vocabRepo.FindByID(ctx, vocabID)
 	if err != nil {
-		return apperr.InternalServerError("common.internal_server_error", err)
+		return apperr.InternalServerError("common.internal_error", err)
 	}
 
 	if vocab == nil {
@@ -130,7 +130,7 @@ func (useCase *VocabularyCommand) DeleteVocabulary(ctx context.Context, id strin
 	}
 
 	if err := useCase.vocabRepo.Delete(ctx, vocabID); err != nil {
-		return apperr.InternalServerError("common.internal_server_error", err)
+		return apperr.InternalServerError("common.internal_error", err)
 	}
 
 	return nil
@@ -144,7 +144,7 @@ func (useCase *VocabularyCommand) SetTopics(ctx context.Context, id string, topi
 
 	vocab, err := useCase.vocabRepo.FindByID(ctx, vocabID)
 	if err != nil {
-		return apperr.InternalServerError("common.internal_server_error", err)
+		return apperr.InternalServerError("common.internal_error", err)
 	}
 
 	if vocab == nil {
@@ -159,7 +159,7 @@ func (useCase *VocabularyCommand) SetTopics(ctx context.Context, id string, topi
 	if len(parsed) > 0 {
 		found, findErr := useCase.topicRepo.FindByIDs(ctx, parsed)
 		if findErr != nil {
-			return apperr.InternalServerError("common.internal_server_error", findErr)
+			return apperr.InternalServerError("common.internal_error", findErr)
 		}
 
 		if len(found) != len(parsed) {
@@ -168,7 +168,7 @@ func (useCase *VocabularyCommand) SetTopics(ctx context.Context, id string, topi
 	}
 
 	if err := useCase.vocabRepo.SetTopics(ctx, vocabID, parsed); err != nil {
-		return apperr.InternalServerError("common.internal_server_error", err)
+		return apperr.InternalServerError("common.internal_error", err)
 	}
 
 	return nil
@@ -182,7 +182,7 @@ func (useCase *VocabularyCommand) SetGrammarPoints(ctx context.Context, id strin
 
 	vocab, err := useCase.vocabRepo.FindByID(ctx, vocabID)
 	if err != nil {
-		return apperr.InternalServerError("common.internal_server_error", err)
+		return apperr.InternalServerError("common.internal_error", err)
 	}
 
 	if vocab == nil {
@@ -197,7 +197,7 @@ func (useCase *VocabularyCommand) SetGrammarPoints(ctx context.Context, id strin
 	if len(parsed) > 0 {
 		found, findErr := useCase.grammarRepo.FindByIDs(ctx, parsed)
 		if findErr != nil {
-			return apperr.InternalServerError("common.internal_server_error", findErr)
+			return apperr.InternalServerError("common.internal_error", findErr)
 		}
 
 		if len(found) != len(parsed) {
@@ -206,7 +206,7 @@ func (useCase *VocabularyCommand) SetGrammarPoints(ctx context.Context, id strin
 	}
 
 	if err := useCase.vocabRepo.SetGrammarPoints(ctx, vocabID, parsed); err != nil {
-		return apperr.InternalServerError("common.internal_server_error", err)
+		return apperr.InternalServerError("common.internal_error", err)
 	}
 
 	return nil

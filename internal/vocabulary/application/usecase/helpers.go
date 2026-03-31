@@ -23,7 +23,7 @@ func getOwnedFolder(ctx context.Context, folderRepo port.FolderRepositoryPort, i
 
 	folder, err := folderRepo.FindByID(ctx, fid)
 	if err != nil {
-		return nil, apperr.InternalServerError("common.internal_server_error", err)
+		return nil, apperr.InternalServerError("common.internal_error", err)
 	}
 	if folder == nil {
 		return nil, apperr.NotFound("folder.not_found")
@@ -59,6 +59,6 @@ func mapVocabEntityError(err error) error {
 	case errors.Is(err, domain.ErrInvalidProficiencyLevelID):
 		return apperr.BadRequest("vocabulary.invalid_proficiency_level_id")
 	default:
-		return apperr.InternalServerError("common.internal_server_error", err)
+		return apperr.InternalServerError("common.internal_error", err)
 	}
 }

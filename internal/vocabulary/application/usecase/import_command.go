@@ -51,7 +51,7 @@ func (useCase *ImportCommand) ImportVocabularies(ctx context.Context, req vdto.B
 	for key, group := range groupMap {
 		existing, err := useCase.vocabRepo.FindByWordList(ctx, group.languageID, group.words)
 		if err != nil {
-			return nil, apperr.InternalServerError("common.internal_server_error", err)
+			return nil, apperr.InternalServerError("common.internal_error", err)
 		}
 		wordSet := make(map[string]bool, len(existing))
 		for _, vocab := range existing {
@@ -95,7 +95,7 @@ func (useCase *ImportCommand) ImportVocabularies(ctx context.Context, req vdto.B
 		var err error
 		imported, err = useCase.vocabRepo.SaveBatch(ctx, newVocabs)
 		if err != nil {
-			return nil, apperr.InternalServerError("common.internal_server_error", err)
+			return nil, apperr.InternalServerError("common.internal_error", err)
 		}
 	}
 

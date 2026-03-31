@@ -74,12 +74,12 @@ func callSelfHostedOCR(ctx context.Context, client *http.Client, baseURL string,
 
 	body, err := json.Marshal(payload)
 	if err != nil {
-		return nil, apperr.InternalServerError("common.internal_server_error", err)
+		return nil, apperr.InternalServerError("common.internal_error", err)
 	}
 
 	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, baseURL+"/recognize", bytes.NewReader(body))
 	if err != nil {
-		return nil, apperr.InternalServerError("common.internal_server_error", err)
+		return nil, apperr.InternalServerError("common.internal_error", err)
 	}
 	httpReq.Header.Set("Content-Type", "application/json")
 
