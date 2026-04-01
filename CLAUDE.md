@@ -107,3 +107,4 @@ Design docs in `.claude/docs/`
 - **Error Handling**: See [`.claude/rules/error_handling.md`](.claude/rules/error_handling.md)
 - **API Response Contract**: See [`.claude/rules/api_response.md`](.claude/rules/api_response.md)
 - **Planning Rules**: See [`.claude/rules/planning_rules.md`](.claude/rules/planning_rules.md)
+- **Documentation**: See [`.claude/rules/documentation.md`](.claude/rules/documentation.md)
