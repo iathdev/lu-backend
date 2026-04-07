@@ -25,6 +25,7 @@ Upload image truc tiep, ho tro tat ca engines.
 | `google`    | OCR  | Service account `.gcp/ocr.json` (auto) | characters + confidence + bbox |
 | `glm`       | VLM  | Ollama local (free) hoac `ZAI_API_KEY` | raw text                  |
 | `deepseek`  | VLM  | `DEEPSEEK_API_KEY`            | raw text                      |
+| `dolphin`   | VLM  | Khong can (local HuggingFace) | raw text                      |
 
 ---
 
@@ -194,7 +195,43 @@ curl http://localhost:8000/health
 
 ---
 
-## Setup nhanh
+## Python test scripts (truc tiep, khong can server)
+
+Goi thang vao engine Python API. Khong can chay uvicorn.
+
+```bash
+cd scripts/ocr-service
+source .venv/bin/activate
+
+# PaddleOCR — khong can setup them
+python test_paddleocr.py [image_path] [zh|en|vi]
+
+# Tesseract — can: brew install tesseract tesseract-lang && pip install pytesseract Pillow
+python test_tesseract.py [image_path] [zh|en|vi]
+
+# Google Cloud Vision — can: pip install google-auth google-cloud-vision
+python test_google.py [image_path] [zh|en|vi]
+
+# GLM local — can: ollama serve && ollama pull glm-ocr
+python test_glm.py [image_path]
+
+# GLM cloud — can: ZAI_API_KEY
+python test_glm.py [image_path] --cloud
+
+# DeepSeek — can: DEEPSEEK_API_KEY
+python test_deepseek.py [image_path]
+
+# Dolphin-v2 (ByteDance) — can: pip install torch torchvision transformers accelerate Pillow
+# First run downloads model from HuggingFace (~6GB). Requires ~16GB VRAM (bfloat16) or --4bit (~6GB).
+python test_dolphin.py [image_path]
+python test_dolphin.py [image_path] --4bit    # 4-bit quantized mode
+```
+
+Default: `test_image.png`, language `zh`.
+
+---
+
+## Setup nhanh (HTTP server)
 
 ```bash
 cd scripts/ocr-service

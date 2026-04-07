@@ -1,24 +1,67 @@
 # OCR Service — Testing Guide
 
-So sanh tat ca OCR engines. Test qua endpoint `POST /test` (upload file truc tiep).
+Co 2 cach test: **Python script** (goi truc tiep API, khong can server) va **HTTP** (qua endpoint `POST /test`).
 
 ## Setup
 
 ```bash
-cd lu-backend/scripts/ocr-service
+cd backend/scripts/ocr-service
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
+```
 
-# Chay server
+---
+
+## Cach 1: Python script (truc tiep, khong can server)
+
+Goi thang vao engine Python API. Khong can chay uvicorn.
+
+```bash
+source .venv/bin/activate
+
+# PaddleOCR (default, khong can setup them)
+python test_paddleocr.py [image_path] [zh|en|vi]
+
+# Tesseract (can: brew install tesseract tesseract-lang && pip install pytesseract Pillow)
+python test_tesseract.py [image_path] [zh|en|vi]
+
+# Google Cloud Vision (can: pip install google-auth google-cloud-vision)
+python test_google.py [image_path] [zh|en|vi]
+
+# GLM — Ollama local (can: ollama serve && ollama pull glm-ocr)
+python test_glm.py [image_path]
+
+# GLM — Zhipu AI cloud
+export ZAI_API_KEY=your-key-here
+python test_glm.py [image_path] --cloud
+
+# DeepSeek (can: DEEPSEEK_API_KEY)
+export DEEPSEEK_API_KEY=sk-...
+python test_deepseek.py [image_path]
+
+# Dolphin-v2 — ByteDance local VLM (can: pip install torch torchvision transformers accelerate)
+python test_dolphin.py [image_path]
+
+# Dolphin-v2 — 4-bit quantized (it VRAM hon, ~6GB thay vi ~16GB)
+python test_dolphin.py [image_path] --4bit
+```
+
+Default: `test_image.png`, language `zh`.
+
+---
+
+## Cach 2: HTTP server (qua endpoint)
+
+Can chay server truoc:
+
+```bash
 uvicorn main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
 Swagger UI: http://localhost:8000/docs
 
----
-
-## 1. PaddleOCR (default)
+### 1. PaddleOCR (default)
 
 **Khong can setup them gi. Chay ngay.**
 
@@ -30,9 +73,7 @@ curl -F image=@test_image.png http://localhost:8000/test
 - Output: characters + confidence (per-char) + bounding box
 - Model: PP-OCRv5
 
----
-
-## 2. Tesseract
+### 2. Tesseract
 
 **Can cai them tesseract.**
 
@@ -47,9 +88,7 @@ curl -F image=@test_image.png -F engine=tesseract http://localhost:8000/test
 - Type: OCR
 - Output: characters + confidence + bounding box
 
----
-
-## 3. Google Cloud Vision
+### 3. Google Cloud Vision
 
 **Khong can set env var. Dung service account `.gcp/ocr.json` (da co san).**
 
@@ -65,9 +104,7 @@ curl -F image=@test_image.png -F engine=google http://localhost:8000/test
 - Output: characters + confidence + bounding box
 - Auth: service account tu `.gcp/ocr.json` (auto detect)
 
----
-
-## 4. GLM — Local via Ollama
+### 4. GLM — Local via Ollama
 
 **Free. Khong can key.**
 
@@ -85,9 +122,7 @@ curl -F image=@test_image.png -F engine=glm http://localhost:8000/test
 - Output: raw text (khong co confidence, khong co bounding box)
 - Model: `glm-ocr` (0.9B) — nhe, chay duoc tren Mac
 
----
-
-## 5. GLM — Cloud via Zhipu AI
+### 5. GLM — Cloud via Zhipu AI
 
 **Can key. Free tier.**
 
@@ -108,9 +143,7 @@ curl -F image=@test_image.png -F engine=glm http://localhost:8000/test
 - Model: `glm-4v-flash` (mien phi)
 - Luu y: neu co `ZAI_API_KEY` -> tu dong dung cloud, khong thi fallback ve Ollama local
 
----
-
-## 6. DeepSeek
+### 6. DeepSeek
 
 **Can key. ~$2 free credit.**
 
@@ -133,7 +166,7 @@ curl -F image=@test_image.png -F engine=deepseek http://localhost:8000/test
 
 ---
 
-## Test tat ca engines cung luc
+## Test tat ca engines cung luc (HTTP)
 
 ```bash
 # Chay lan luot, so sanh ket qua
@@ -148,18 +181,20 @@ done
 
 ## So sanh
 
-| Engine      | Type | Free | Can key          | Confidence | Bounding box | Toc do  |
-|-------------|------|------|------------------|------------|--------------|---------|
-| `paddleocr` | OCR  | Yes  | Khong            | Per-char   | Co           | Nhanh   |
-| `tesseract` | OCR  | Yes  | Khong            | Per-word   | Co           | Nhanh   |
-| `google`    | OCR  | Free tier | Khong (SA auto) | Co      | Co           | Nhanh   |
-| `glm`       | VLM  | Yes  | Khong (Ollama)   | Khong      | Khong        | Tuy may |
-| `deepseek`  | VLM  | ~$2  | Co               | Khong      | Khong        | Nhanh   |
+| Engine      | Type | Free | Can key          | Confidence | Bounding box | Toc do  | Test script         |
+|-------------|------|------|------------------|------------|--------------|---------|---------------------|
+| `paddleocr` | OCR  | Yes  | Khong            | Per-char   | Co           | Nhanh   | `test_paddleocr.py` |
+| `tesseract` | OCR  | Yes  | Khong            | Per-word   | Co           | Nhanh   | `test_tesseract.py` |
+| `google`    | OCR  | Free tier | Khong (SA auto) | Co      | Co           | Nhanh   | `test_google.py`    |
+| `glm`       | VLM  | Yes  | Khong (Ollama)   | Khong      | Khong        | Tuy may | `test_glm.py`       |
+| `deepseek`  | VLM  | ~$2  | Co               | Khong      | Khong        | Nhanh   | `test_deepseek.py`  |
+| `dolphin`   | VLM  | Yes  | Khong (local)    | Khong      | Khong        | Tuy GPU | `test_dolphin.py`   |
 
 ## Thu tu test khuyen nghi
 
-1. **PaddleOCR** — da co san, chay ngay
-2. **Google Cloud Vision** — SA da co, chi can pip install
-3. **GLM Ollama** — free, khong can key, can cai Ollama
-4. **Tesseract** — can brew install
-5. **GLM Cloud / DeepSeek** — can dang ky lay key
+1. **PaddleOCR** — da co san, chay ngay (`python test_paddleocr.py`)
+2. **Google Cloud Vision** — SA da co, chi can pip install (`python test_google.py`)
+3. **GLM Ollama** — free, khong can key, can cai Ollama (`python test_glm.py`)
+4. **Tesseract** — can brew install (`python test_tesseract.py`)
+5. **GLM Cloud / DeepSeek** — can dang ky lay key (`python test_glm.py --cloud` / `python test_deepseek.py`)
+6. **Dolphin-v2** — can GPU 16GB VRAM hoac dung `--4bit` (~6GB) (`python test_dolphin.py`)
